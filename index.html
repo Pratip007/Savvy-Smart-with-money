@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1e3a8a">
+  <title>Savvy</title>
+
+  <!-- Google Fonts — Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HEADER ───────────────────────────────────────────── -->
+  <header id="app-header">
+    <div class="header-brand">
+      <i class="fa-solid fa-piggy-bank header-logo"></i>
+      <span class="header-title">Savvy</span>
+    </div>
+    <div class="header-controls">
+      <button id="sync-btn" class="sync-dot" title="Sync status" hidden></button>
+      <div class="month-nav">
+        <button class="header-icon-btn" id="prev-month">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <span class="month-label" id="month-label">Jul 2026</span>
+        <button class="header-icon-btn" id="next-month">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── TAB BAR ──────────────────────────────────────────── -->
+  <nav id="tab-bar">
+    <button class="tab active" data-page="estimates">
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+      <span>Estimates</span>
+    </button>
+    <button class="tab" data-page="final">
+      <i class="fa-solid fa-circle-check"></i>
+      <span>Final</span>
+    </button>
+    <button class="tab" data-page="statistics">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Statistics</span>
+    </button>
+    <button class="tab" data-page="settings">
+      <i class="fa-solid fa-gear"></i>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+  <main id="main-content">
+    <div id="estimates-page"  class="page active"></div>
+    <div id="final-page"      class="page"></div>
+    <div id="statistics-page" class="page"></div>
+    <div id="settings-page"   class="page"></div>
+  </main>
+
+</div><!-- #app -->
+
+<!-- ── ADD CATEGORY MODAL ─────────────────────────────────── -->
+<div id="cat-modal" class="modal-overlay" style="display:none">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
+    <div class="modal-drag-handle"></div>
+    <h3 class="modal-heading" id="modal-heading">New Category</h3>
+    <input class="form-input" id="cat-input" type="text"
+           placeholder="e.g. Subscriptions" maxlength="40" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-confirm">
+        <i class="fa-solid fa-plus"></i> Add Category
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ────────────────────────────────────────────────── -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ── HIDDEN FILE INPUT ────────────────────────────────────── -->
+<input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none">
+
+<!-- ── APP SCRIPT ───────────────────────────────────────────── -->
+<script src="js/app.js"></script>
+</body>
+</html>
