@@ -1076,10 +1076,18 @@ function rowsToData(rows) {
     if (!data[month][mode]?.[type]) return;
     if (!data[month][mode][type][cat])
       data[month][mode][type][cat] = { collapsed: false, items: [] };
-    if (itemName)
-      data[month][mode][type][cat].items.push({
-        id: itemId || uid(), name: itemName, amount: parseFloat(amount) || 0
-      });
+    if (itemName) {
+      const items = data[month][mode][type][cat].items;
+      const amt = parseFloat(amount) || 0;
+      // Deduplicate: match by ID first, then by name — keep the non-zero amount
+      const byId = itemId ? items.find(i => i.id === itemId) : null;
+      if (byId) { if (amt) byId.amount = amt; }
+      else {
+        const byName = items.find(i => i.name === itemName);
+        if (byName) { if (amt) byName.amount = amt; }
+        else items.push({ id: itemId || uid(), name: itemName, amount: amt });
+      }
+    }
   });
   return data;
 }
