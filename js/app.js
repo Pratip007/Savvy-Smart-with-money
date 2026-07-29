@@ -43,9 +43,11 @@ function doPost(e) {
   var p = JSON.parse(e.postData.contents);
   var s = getOrCreate();
   s.clearContents();
-  if (p.rows && p.rows.length)
-    s.getRange(1,1,p.rows.length,p.rows[0].length)
-     .setValues(p.rows);
+  if (p.rows && p.rows.length) {
+    var range = s.getRange(1,1,p.rows.length,p.rows[0].length);
+    range.setNumberFormat('@');
+    range.setValues(p.rows);
+  }
   return out(JSON.stringify({ ok: true }));
 }
 
@@ -979,7 +981,10 @@ function rowsToData(rows) {
   const data = {};
   if (!rows || rows.length < 2) return data;
   rows.slice(1).forEach(row => {
-    const [month, mode, type, cat, itemName, itemId, amount] = row.map(c => String(c ?? ''));
+    let [month, mode, type, cat, itemName, itemId, amount] = row.map(c => String(c ?? ''));
+    // Google Sheets auto-converts 'YYYY-MM' to a Date; extract YYYY-MM back
+    const dm = month.match(/^(\d{4})-(\d{2})/);
+    if (dm) month = dm[1] + '-' + dm[2];
     if (!month || !mode || !type || !cat) return;
     if (!data[month]) data[month] = {
       estimates: { income: {}, expenses: {} },
