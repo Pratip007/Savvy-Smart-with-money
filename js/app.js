@@ -67,6 +67,7 @@ function doPost(e) {
 /* Save flat rows to _Data sheet (not hidden yet — caller hides after month sheets are built) */
 function saveRaw(ss, rows) {
   var s = ss.getSheetByName(DATA_SHEET) || ss.insertSheet(DATA_SHEET);
+  try { s.showSheet(); } catch(x) {}  // ensure visible so deleting other sheets won't leave zero visible sheets
   s.clearContents(); s.clearFormats();
   s.getRange(1, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows);
   s.setTabColor('#999999');
