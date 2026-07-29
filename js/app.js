@@ -3,29 +3,29 @@
    ═══════════════════════════════════════════════════════════ */
 
 /* ─── 1. CONSTANTS ──────────────────────────────────────── */
-const MONTHS = ['January','February','March','April','May','June',
-                'July','August','September','October','November','December'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
 
-const CCOLORS = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'];
+const CCOLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 
 const DEF_INCOME = [
-  { name:'Employment',  items:['Salary','Bonus','Overtime'] },
-  { name:'Business',    items:['Freelance','Consulting'] },
-  { name:'Investments', items:['Dividends','Interest','Rental Income'] },
-  { name:'Other Income',items:['Gifts','Tax Refund','Other'] }
+  { name: 'Employment', items: ['Salary', 'Bonus', 'Overtime'] },
+  { name: 'Business', items: ['Freelance', 'Consulting'] },
+  { name: 'Investments', items: ['Dividends', 'Interest', 'Rental Income'] },
+  { name: 'Other Income', items: ['Gifts', 'Tax Refund', 'Other'] }
 ];
 
 const DEF_EXPENSES = [
-  { name:'Housing',      items:['Rent / Mortgage','Electricity','Water','Internet','Phone','Maintenance'] },
-  { name:'Food',         items:['Groceries','Dining Out','Coffee & Snacks','Food Delivery'] },
-  { name:'Transport',    items:['Car Payment','Fuel / Gas','Car Insurance','Public Transit'] },
-  { name:'Health',       items:['Health Insurance','Doctor / Hospital','Pharmacy','Gym'] },
-  { name:'Entertainment',items:['Streaming','Movies & Events','Hobbies','Gaming'] },
-  { name:'Personal Care',items:['Haircut','Beauty','Clothing','Accessories'] },
-  { name:'Education',    items:['Books','Online Courses','Subscriptions','Tuition'] },
-  { name:'Savings',      items:['Emergency Fund','Retirement','Investments','Goals'] },
-  { name:'Debt',         items:['Credit Card','Student Loan','Personal Loan'] },
-  { name:'Misc',         items:['Charity','Gifts & Presents','Pet Care','Unexpected'] }
+  { name: 'Housing', items: ['Rent / Mortgage', 'Electricity', 'Water', 'Internet', 'Phone', 'Maintenance'] },
+  { name: 'Food', items: ['Groceries', 'Dining Out', 'Coffee & Snacks', 'Food Delivery'] },
+  { name: 'Transport', items: ['Car Payment', 'Fuel / Gas', 'Car Insurance', 'Public Transit'] },
+  { name: 'Health', items: ['Health Insurance', 'Doctor / Hospital', 'Pharmacy', 'Gym'] },
+  { name: 'Entertainment', items: ['Streaming', 'Movies & Events', 'Hobbies', 'Gaming'] },
+  { name: 'Personal Care', items: ['Haircut', 'Beauty', 'Clothing', 'Accessories'] },
+  { name: 'Education', items: ['Books', 'Online Courses', 'Subscriptions', 'Tuition'] },
+  { name: 'Savings', items: ['Emergency Fund', 'Retirement', 'Investments', 'Goals'] },
+  { name: 'Debt', items: ['Credit Card', 'Student Loan', 'Personal Loan'] },
+  { name: 'Misc', items: ['Charity', 'Gifts & Presents', 'Pet Care', 'Unexpected'] }
 ];
 
 const GS_KEY = 'gs_url_v1';
@@ -51,8 +51,19 @@ function doPost(e) {
 
 function getOrCreate() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(SHEET)
-    || ss.insertSheet(SHEET);
+  if (!ss) {
+    var props = PropertiesService.getScriptProperties();
+    var ssId  = props.getProperty('SPREADSHEET_ID');
+    if (ssId) {
+      try { ss = SpreadsheetApp.openById(ssId); }
+      catch(e) { ss = null; }
+    }
+    if (!ss) {
+      ss = SpreadsheetApp.create('Savvy Budget');
+      props.setProperty('SPREADSHEET_ID', ss.getId());
+    }
+  }
+  return ss.getSheetByName(SHEET) || ss.insertSheet(SHEET);
 }
 
 function out(txt) {
@@ -62,32 +73,32 @@ function out(txt) {
 }`;
 
 const CURRENCIES = [
-  { code:'USD', label:'$ USD — US Dollar' },
-  { code:'EUR', label:'€ EUR — Euro' },
-  { code:'GBP', label:'£ GBP — British Pound' },
-  { code:'INR', label:'₹ INR — Indian Rupee' },
-  { code:'JPY', label:'¥ JPY — Japanese Yen' },
-  { code:'CAD', label:'$ CAD — Canadian Dollar' },
-  { code:'AUD', label:'$ AUD — Australian Dollar' },
-  { code:'CHF', label:'₣ CHF — Swiss Franc' },
-  { code:'BRL', label:'R$ BRL — Brazilian Real' },
-  { code:'MXN', label:'$ MXN — Mexican Peso' },
-  { code:'AED', label:'د.إ AED — UAE Dirham' },
-  { code:'SGD', label:'$ SGD — Singapore Dollar' },
+  { code: 'USD', label: '$ USD — US Dollar' },
+  { code: 'EUR', label: '€ EUR — Euro' },
+  { code: 'GBP', label: '£ GBP — British Pound' },
+  { code: 'INR', label: '₹ INR — Indian Rupee' },
+  { code: 'JPY', label: '¥ JPY — Japanese Yen' },
+  { code: 'CAD', label: '$ CAD — Canadian Dollar' },
+  { code: 'AUD', label: '$ AUD — Australian Dollar' },
+  { code: 'CHF', label: '₣ CHF — Swiss Franc' },
+  { code: 'BRL', label: 'R$ BRL — Brazilian Real' },
+  { code: 'MXN', label: '$ MXN — Mexican Peso' },
+  { code: 'AED', label: 'د.إ AED — UAE Dirham' },
+  { code: 'SGD', label: '$ SGD — Singapore Dollar' },
 ];
 
 /* ─── 2. STATE ──────────────────────────────────────────── */
 const S = {
-  year:  new Date().getFullYear(),
+  year: new Date().getFullYear(),
   month: new Date().getMonth(),
-  page:  'estimates',
-  data:  {}
+  page: 'estimates',
+  data: {}
 };
 
 /* ─── 3. PERSISTENCE ────────────────────────────────────── */
 function loadAll() {
   try { S.data = JSON.parse(localStorage.getItem('budgetv3') || '{}'); }
-  catch(e) { S.data = {}; }
+  catch (e) { S.data = {}; }
 }
 
 function save() {
@@ -116,8 +127,8 @@ function getM(key) {
 
 function makeMonth() {
   return {
-    estimates: { income: buildSec(DEF_INCOME),   expenses: buildSec(DEF_EXPENSES) },
-    final:     { income: buildSec(DEF_INCOME),   expenses: buildSec(DEF_EXPENSES) }
+    estimates: { income: buildSec(DEF_INCOME), expenses: buildSec(DEF_EXPENSES) },
+    final: { income: buildSec(DEF_INCOME), expenses: buildSec(DEF_EXPENSES) }
   };
 }
 
@@ -168,10 +179,10 @@ function setPage(page) {
 }
 
 function render() {
-  if      (S.page === 'estimates') renderBudget('estimates');
-  else if (S.page === 'final')     renderBudget('final');
-  else if (S.page === 'settings')  renderSettings();
-  else                             renderStats();
+  if (S.page === 'estimates') renderBudget('estimates');
+  else if (S.page === 'final') renderBudget('final');
+  else if (S.page === 'settings') renderSettings();
+  else renderStats();
 }
 
 let AC = {};
@@ -285,11 +296,11 @@ function renderCats(section, type, mode) {
     const rows = cat.items.map(item => {
       let vc = '';
       if (mode === 'final') {
-        const estCat  = getM().estimates[type][name];
+        const estCat = getM().estimates[type][name];
         const estItem = estCat ? estCat.items.find(i => i.name === item.name) : null;
         if (estItem != null) {
           const diff = (parseFloat(item.amount) || 0) - (parseFloat(estItem.amount) || 0);
-          const cls  = diff > 0 ? 'variance-over' : diff < 0 ? 'variance-under' : 'variance-exact';
+          const cls = diff > 0 ? 'variance-over' : diff < 0 ? 'variance-under' : 'variance-exact';
           vc = `<span class="variance-chip ${cls}">${diff > 0 ? '+' : ''}${fmt(diff)}</span>`;
         }
       }
@@ -338,9 +349,9 @@ function updTotals(mode) {
   if (badges[1]) badges[1].textContent = fmt(tE);
   pg.querySelectorAll('.category-card').forEach(card => {
     const hdr = card.querySelector('[data-a="tcat"]'); if (!hdr) return;
-    const ct  = decodeURIComponent(hdr.dataset.cat);
-    const c   = sec[hdr.dataset.type]?.[ct]; if (!c) return;
-    const el  = card.querySelector('.category-total'); if (el) el.textContent = fmt(catSum(c));
+    const ct = decodeURIComponent(hdr.dataset.cat);
+    const c = sec[hdr.dataset.type]?.[ct]; if (!c) return;
+    const el = card.querySelector('.category-total'); if (el) el.textContent = fmt(catSum(c));
   });
 }
 
@@ -358,11 +369,11 @@ function renderStats() {
   }
 
   const key = mkey(), d = getM(key);
-  const fI = secTotal(d.final.income),     fE = secTotal(d.final.expenses),     fN = fI - fE;
+  const fI = secTotal(d.final.income), fE = secTotal(d.final.expenses), fN = fI - fE;
   const eI = secTotal(d.estimates.income), eE = secTotal(d.estimates.expenses), eN = eI - eE;
   const hasFinal = fI > 0 || fE > 0, hasEst = eI > 0 || eE > 0;
-  const expSrc    = hasFinal ? d.final.expenses : d.estimates.expenses;
-  const incSrc    = hasFinal ? d.final.income   : d.estimates.income;
+  const expSrc = hasFinal ? d.final.expenses : d.estimates.expenses;
+  const incSrc = hasFinal ? d.final.income : d.estimates.income;
   const hasExpData = secTotal(expSrc) > 0, hasIncData = secTotal(incSrc) > 0;
   const effI = fI || eI, effE = fE || eE, effN = effI - effE;
   const sr = fI > 0 ? Math.round((fN / fI) * 100) : (eI > 0 ? Math.round(((eI - eE) / eI) * 100) : 0);
@@ -452,7 +463,7 @@ function renderStats() {
             <span><i class="fa-solid fa-arrow-trend-up" style="color:var(--color-income);font-size:10px;margin-right:4px"></i>Income</span>
             <span class="bp-pct">${iP}%</span>
           </div>
-          <div class="bp-track"><div class="bp-fill bp-fill-income" style="width:${Math.min(100,iP)}%"></div></div>
+          <div class="bp-track"><div class="bp-fill bp-fill-income" style="width:${Math.min(100, iP)}%"></div></div>
           <div class="bp-amounts">${fmt(fI)} <span class="bp-of">of est.</span> ${fmt(eI)}</div>
         </div>
         <div class="bp-row">
@@ -460,7 +471,7 @@ function renderStats() {
             <span><i class="fa-solid fa-arrow-trend-down" style="color:var(--color-expense);font-size:10px;margin-right:4px"></i>Expenses</span>
             <span class="bp-pct ${eP > 100 ? 'pct-over' : ''}">${eP}%</span>
           </div>
-          <div class="bp-track"><div class="bp-fill ${eP > 100 ? 'bp-fill-over' : eP > 80 ? 'bp-fill-warn' : 'bp-fill-expense'}" style="width:${Math.min(100,eP)}%"></div></div>
+          <div class="bp-track"><div class="bp-fill ${eP > 100 ? 'bp-fill-over' : eP > 80 ? 'bp-fill-warn' : 'bp-fill-expense'}" style="width:${Math.min(100, eP)}%"></div></div>
           <div class="bp-amounts">${fmt(fE)} <span class="bp-of">of est.</span> ${fmt(eE)}</div>
         </div>
         <div class="bp-row">
@@ -468,7 +479,7 @@ function renderStats() {
             <span><i class="fa-solid fa-piggy-bank" style="color:var(--brand-600);font-size:10px;margin-right:4px"></i>Budget Used</span>
             <span class="bp-pct ${bU > 90 ? 'pct-over' : bU > 75 ? 'pct-warn' : ''}">${bU}%</span>
           </div>
-          <div class="bp-track"><div class="bp-fill ${bU > 90 ? 'bp-fill-over' : bU > 75 ? 'bp-fill-warn' : 'bp-fill-neutral'}" style="width:${Math.min(100,bU)}%"></div></div>
+          <div class="bp-track"><div class="bp-fill ${bU > 90 ? 'bp-fill-over' : bU > 75 ? 'bp-fill-warn' : 'bp-fill-neutral'}" style="width:${Math.min(100, bU)}%"></div></div>
           <div class="bp-amounts">${fmt(effE)} <span class="bp-of">of</span> ${fmt(effI)}</div>
         </div>
       </div>
@@ -489,7 +500,7 @@ function renderStats() {
       .map(([n, c]) => ({ n, v: catSum(c) }))
       .filter(e => e.v > 0).sort((a, b) => b.v - a.v).slice(0, 5);
     const totExp = topExps.reduce((s, e) => s + e.v, 0) || 1;
-    const tRows  = topExps.map((e, i) => `
+    const tRows = topExps.map((e, i) => `
       <div class="texp-row">
         <div class="texp-rank" style="background:${CCOLORS[i]}20;border-color:${CCOLORS[i]}55;color:${CCOLORS[i]}">${i + 1}</div>
         <div class="texp-body">
@@ -554,11 +565,11 @@ function renderStats() {
     let totI = 0, totE = 0, bestNet = null, bestKey = null, worstNet = null, worstKey = null;
     allKeys.forEach(k => {
       const dd = S.data[k];
-      const inc = secTotal(dd.final.income)   || secTotal(dd.estimates.income);
+      const inc = secTotal(dd.final.income) || secTotal(dd.estimates.income);
       const exp = secTotal(dd.final.expenses) || secTotal(dd.estimates.expenses);
       totI += inc; totE += exp;
       const net = inc - exp;
-      if (bestNet  === null || net > bestNet)  { bestNet  = net;  bestKey  = k; }
+      if (bestNet === null || net > bestNet) { bestNet = net; bestKey = k; }
       if (worstNet === null || net < worstNet) { worstNet = net; worstKey = k; }
     });
     const avgI = totI / allKeys.length, avgE = totE / allKeys.length;
@@ -594,7 +605,7 @@ function renderStats() {
   /* ── All Months Table ────────────────────────────────── */
   const rows = allKeys.slice().reverse().map(k => {
     const dd = S.data[k]; if (!dd) return '';
-    const inc = secTotal(dd.final.income)   || secTotal(dd.estimates.income);
+    const inc = secTotal(dd.final.income) || secTotal(dd.estimates.income);
     const exp = secTotal(dd.final.expenses) || secTotal(dd.estimates.expenses);
     const net = inc - exp;
     const [yr, mo] = k.split('-');
@@ -631,18 +642,18 @@ function renderStats() {
   document.getElementById('tplbtn')?.addEventListener('click', dlTemplate);
 
   requestAnimationFrame(() => {
-    if (effI > 0 || effE > 0)  drawMonthlyCircle(effI, effE, effN);
-    if (hasFinal || hasEst)    drawOverview(d);
-    if (hasExpData)            drawPie(expSrc);
-    if (hasIncData)            drawIncomePie(incSrc);
-    if (hasEst && hasFinal)    { drawBar(d); drawIncomeBar(d); }
-    if (allKeys.length > 1)    { drawTrend(allKeys); drawNetTrend(allKeys); }
+    if (effI > 0 || effE > 0) drawMonthlyCircle(effI, effE, effN);
+    if (hasFinal || hasEst) drawOverview(d);
+    if (hasExpData) drawPie(expSrc);
+    if (hasIncData) drawIncomePie(incSrc);
+    if (hasEst && hasFinal) { drawBar(d); drawIncomeBar(d); }
+    if (allKeys.length > 1) { drawTrend(allKeys); drawNetTrend(allKeys); }
   });
 }
 
 /* ─── 8. RENDER — SETTINGS PAGE ─────────────────────────── */
 function renderSettings() {
-  const url  = getGSURL();
+  const url = getGSURL();
   const curr = getCurrency();
 
   document.getElementById('settings-page').innerHTML = `
@@ -695,9 +706,9 @@ function renderSettings() {
         <div class="setup-step">
           <div class="step-number">1</div>
           <div class="step-content">
-            Go to <a href="https://sheets.new" target="_blank">sheets.new</a>
-            to create a new Google Sheet, then open
-            <strong>Extensions → Apps Script</strong>
+            Go to <a href="https://script.google.com" target="_blank">script.google.com</a>
+            and click <strong>New project</strong>
+            (a "Savvy Budget" spreadsheet will be created automatically in your Drive)
           </div>
         </div>
         <div class="setup-step">
@@ -789,7 +800,7 @@ function delItem(type, mode, catName, itemId) {
 function copyFromEst() {
   const d = getM();
   const clone = JSON.parse(JSON.stringify(d.estimates));
-  ['income','expenses'].forEach(t =>
+  ['income', 'expenses'].forEach(t =>
     Object.values(clone[t]).forEach(cat =>
       cat.items.forEach(i => { i.id = uid(); i.amount = 0; })));
   d.final = clone; save(); render();
@@ -823,8 +834,8 @@ function confirmModal() {
 /* ─── 11. IMPORT / EXPORT ───────────────────────────────── */
 function bindDrop() {
   const z = document.getElementById('drop-zone'); if (!z) return;
-  z.addEventListener('dragover',  e => { e.preventDefault(); z.classList.add('drag-over'); });
-  z.addEventListener('dragleave', ()  => z.classList.remove('drag-over'));
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('drag-over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('drag-over'));
   z.addEventListener('drop', e => {
     e.preventDefault(); z.classList.remove('drag-over');
     const f = e.dataTransfer.files[0]; if (f) processFile(f);
@@ -894,9 +905,9 @@ function exportCSV(mode) {
   const lbl = `${MONTHS[S.month]} ${S.year}`;
   const rows = [
     [`Savvy ${mode === 'estimates' ? 'Estimates' : 'Final'} – ${lbl}`],
-    ['Type','Category','Sub-category','Amount']
+    ['Type', 'Category', 'Sub-category', 'Amount']
   ];
-  ['income','expenses'].forEach(t => {
+  ['income', 'expenses'].forEach(t => {
     Object.entries(d[mode][t]).forEach(([cname, cat]) => {
       cat.items.forEach(item => {
         rows.push([t === 'income' ? 'Income' : 'Expenses', cname, item.name, item.amount]);
@@ -904,7 +915,7 @@ function exportCSV(mode) {
     });
   });
   const tI = secTotal(d[mode].income), tE = secTotal(d[mode].expenses);
-  rows.push([], [' Total Income','','',tI], [' Total Expenses','','',tE], [' Net Balance','','',tI-tE]);
+  rows.push([], [' Total Income', '', '', tI], [' Total Expenses', '', '', tE], [' Net Balance', '', '', tI - tE]);
   const csv = rows.map(r => r.map(c => {
     const s = String(c ?? '');
     return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -915,15 +926,15 @@ function exportCSV(mode) {
 
 function dlTemplate() {
   const rows = [
-    ['Type','Category','Sub-category','Amount'],
-    ['Income','Employment','Salary','5000'],
-    ['Income','Employment','Bonus','0'],
-    ['Expenses','Housing','Rent / Mortgage','1500'],
-    ['Expenses','Housing','Electricity','120'],
-    ['Expenses','Food','Groceries','400'],
-    ['Expenses','Food','Dining Out','150'],
-    ['Expenses','Transport','Fuel / Gas','120'],
-    ['Expenses','Health','Health Insurance','200'],
+    ['Type', 'Category', 'Sub-category', 'Amount'],
+    ['Income', 'Employment', 'Salary', '5000'],
+    ['Income', 'Employment', 'Bonus', '0'],
+    ['Expenses', 'Housing', 'Rent / Mortgage', '1500'],
+    ['Expenses', 'Housing', 'Electricity', '120'],
+    ['Expenses', 'Food', 'Groceries', '400'],
+    ['Expenses', 'Food', 'Dining Out', '150'],
+    ['Expenses', 'Transport', 'Fuel / Gas', '120'],
+    ['Expenses', 'Health', 'Health Insurance', '200'],
   ];
   dl('budget-import-template.csv', rows.map(r => r.join(',')).join('\r\n'), 'text/csv');
   toast('Template downloaded');
@@ -938,20 +949,20 @@ function dl(name, content, mime) {
 function exportAllCSV() {
   if (!Object.keys(S.data).length) { toast('No data to export'); return; }
   const rows = dataToRows(S.data);
-  const csv  = rows.map(r => r.join(',')).join('\r\n');
+  const csv = rows.map(r => r.join(',')).join('\r\n');
   dl('budget-all-months.csv', csv, 'text/csv');
   toast('All months exported');
 }
 
 /* ─── 12. GOOGLE SHEETS SYNC ────────────────────────────── */
-function getGSURL()   { return localStorage.getItem(GS_KEY) || ''; }
+function getGSURL() { return localStorage.getItem(GS_KEY) || ''; }
 function saveGSURL(u) { if (u) localStorage.setItem(GS_KEY, u); else localStorage.removeItem(GS_KEY); }
 
 function dataToRows(allData) {
-  const rows = [['Month','Mode','Type','Category','Sub-category','Item ID','Amount']];
+  const rows = [['Month', 'Mode', 'Type', 'Category', 'Sub-category', 'Item ID', 'Amount']];
   Object.entries(allData).forEach(([month, md]) => {
-    ['estimates','final'].forEach(mode => {
-      ['income','expenses'].forEach(type => {
+    ['estimates', 'final'].forEach(mode => {
+      ['income', 'expenses'].forEach(type => {
         const sec = md?.[mode]?.[type]; if (!sec) return;
         Object.entries(sec).forEach(([cat, catData]) => {
           catData.items.forEach(item => {
@@ -972,7 +983,7 @@ function rowsToData(rows) {
     if (!month || !mode || !type || !cat) return;
     if (!data[month]) data[month] = {
       estimates: { income: {}, expenses: {} },
-      final:     { income: {}, expenses: {} }
+      final: { income: {}, expenses: {} }
     };
     if (!data[month][mode]?.[type]) return;
     if (!data[month][mode][type][cat])
@@ -987,6 +998,7 @@ function rowsToData(rows) {
 
 async function pushToSheets() {
   const url = getGSURL(); if (!url) return;
+  clearTimeout(_syncTimer);
   setSyncInd('spin');
   try {
     const resp = await fetch(url, {
@@ -996,7 +1008,7 @@ async function pushToSheets() {
     const json = await resp.json();
     if (json.ok) { setSyncInd('ok'); toast('Pushed to Google Sheets'); }
     else throw new Error(json.error || 'Server error');
-  } catch(e) {
+  } catch (e) {
     setSyncInd('err'); toast('Push failed: ' + e.message);
   }
 }
@@ -1009,27 +1021,28 @@ async function pullFromSheets() {
     const json = await resp.json();
     if (json.ok) {
       S.data = rowsToData(json.rows);
-      save(); setSyncInd('ok'); render();
+      localStorage.setItem('budgetv3', JSON.stringify(S.data));
+      setSyncInd('ok'); render();
       toast('Loaded from Google Sheets');
     } else throw new Error(json.error || 'No data');
-  } catch(e) {
+  } catch (e) {
     setSyncInd('err'); toast('Pull failed: ' + e.message);
   }
 }
 
 function setSyncInd(state) {
-  const el  = document.getElementById('sync-btn');
+  const el = document.getElementById('sync-btn');
   const url = getGSURL();
   if (!url) { el.hidden = true; return; }
   el.hidden = false;
   const tips = {
     pending: 'Auto-sync in 5s…',
-    ok:      'Synced',
-    spin:    'Syncing…',
-    err:     'Sync failed — tap to retry',
-    idle:    'Tap to sync now',
+    ok: 'Synced',
+    spin: 'Syncing…',
+    err: 'Sync failed — tap to retry',
+    idle: 'Tap to sync now',
   };
-  el.title     = tips[state] || '';
+  el.title = tips[state] || '';
   el.className = 'sync-dot ' + (state || 'idle');
 }
 
@@ -1057,9 +1070,9 @@ let _guideOpen = false;
 function toggleGuide() {
   _guideOpen = !_guideOpen;
   const body = document.getElementById('guide-content');
-  const btn  = document.querySelector('.guide-toggle-btn');
+  const btn = document.querySelector('.guide-toggle-btn');
   if (body) body.classList.toggle('open', _guideOpen);
-  if (btn)  btn.classList.toggle('open', _guideOpen);
+  if (btn) btn.classList.toggle('open', _guideOpen);
 }
 
 function copyScript() {
@@ -1081,7 +1094,7 @@ function clearAllData() {
 
 /* ─── 14. CHARTS ────────────────────────────────────────── */
 const CF = { family: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif" };
-Chart.defaults.font  = CF;
+Chart.defaults.font = CF;
 Chart.defaults.color = '#475569';
 
 function drawPie(expenses) {
@@ -1092,11 +1105,11 @@ function drawPie(expenses) {
   let labels, vals, cols;
   if (entries.length <= 8) {
     labels = entries.map(e => e.n); vals = entries.map(e => e.v);
-    cols   = CCOLORS.slice(0, entries.length);
+    cols = CCOLORS.slice(0, entries.length);
   } else {
-    const top  = entries.slice(0, 7), rest = entries.slice(7).reduce((s, e) => s + e.v, 0);
+    const top = entries.slice(0, 7), rest = entries.slice(7).reduce((s, e) => s + e.v, 0);
     labels = [...top.map(e => e.n), 'Other']; vals = [...top.map(e => e.v), rest];
-    cols   = [...CCOLORS.slice(0, 7), '#94a3b8'];
+    cols = [...CCOLORS.slice(0, 7), '#94a3b8'];
   }
   const total = vals.reduce((a, b) => a + b, 0);
   AC.pie = new Chart(cv, {
@@ -1105,13 +1118,17 @@ function drawPie(expenses) {
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '60%',
       plugins: {
-        legend: { position: 'right', labels: { font: { ...CF, size: 10 }, color: '#475569',
-          padding: 6, boxWidth: 10, boxHeight: 10,
-          generateLabels: chart => chart.data.labels.map((lbl, i) => ({
-            text: `${lbl.slice(0, 11)} ${Math.round((vals[i] / total) * 100)}%`,
-            fillStyle: cols[i], hidden: false, index: i
-          }))}},
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} (${Math.round((ctx.raw / total) * 100)}%)` }}
+        legend: {
+          position: 'right', labels: {
+            font: { ...CF, size: 10 }, color: '#475569',
+            padding: 6, boxWidth: 10, boxHeight: 10,
+            generateLabels: chart => chart.data.labels.map((lbl, i) => ({
+              text: `${lbl.slice(0, 11)} ${Math.round((vals[i] / total) * 100)}%`,
+              fillStyle: cols[i], hidden: false, index: i
+            }))
+          }
+        },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} (${Math.round((ctx.raw / total) * 100)}%)` } }
       }
     }
   });
@@ -1126,31 +1143,33 @@ function drawBar(d) {
   })).filter(r => r.est > 0 || r.fin > 0).sort((a, b) => b.est - a.est);
   if (!rows.length) return;
   const labels = rows.map(r => r.n.length > 13 ? r.n.slice(0, 13) + '…' : r.n);
-  const wrap   = document.getElementById('barwrap');
+  const wrap = document.getElementById('barwrap');
   if (wrap) wrap.style.height = `${Math.max(200, rows.length * 36 + 48)}px`;
   AC.bar = new Chart(cv, {
     type: 'bar',
-    data: { labels, datasets: [
-      { label: 'Estimated', data: rows.map(r => r.est), backgroundColor: 'rgba(37,99,235,.65)',  borderColor: '#2563eb', borderWidth: 1, borderRadius: 3 },
-      { label: 'Final',     data: rows.map(r => r.fin), backgroundColor: 'rgba(235,104,52,.65)', borderColor: '#eb6834', borderWidth: 1, borderRadius: 3 }
-    ]},
+    data: {
+      labels, datasets: [
+        { label: 'Estimated', data: rows.map(r => r.est), backgroundColor: 'rgba(37,99,235,.65)', borderColor: '#2563eb', borderWidth: 1, borderRadius: 3 },
+        { label: 'Final', data: rows.map(r => r.fin), backgroundColor: 'rgba(235,104,52,.65)', borderColor: '#eb6834', borderWidth: 1, borderRadius: 3 }
+      ]
+    },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 }},
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` }}
+        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
       },
       scales: {
-        x: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) }},
-        y: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#475569' }}
+        x: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) } },
+        y: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#475569' } }
       }
     }
   });
 }
 
 function drawTrend(allKeys) {
-  const cv   = document.getElementById('trend'); if (!cv) return;
-  const last  = allKeys.slice(-8);
+  const cv = document.getElementById('trend'); if (!cv) return;
+  const last = allKeys.slice(-8);
   const labels = last.map(k => {
     const [yr, mo] = k.split('-');
     return MONTHS[parseInt(mo) - 1].slice(0, 3) + ' \'' + yr.slice(2);
@@ -1158,24 +1177,26 @@ function drawTrend(allKeys) {
   const inc = [], exp = [];
   last.forEach(k => {
     const dd = S.data[k] || makeMonth();
-    inc.push(secTotal(dd.final.income)   || secTotal(dd.estimates.income));
+    inc.push(secTotal(dd.final.income) || secTotal(dd.estimates.income));
     exp.push(secTotal(dd.final.expenses) || secTotal(dd.estimates.expenses));
   });
   AC.trend = new Chart(cv, {
     type: 'bar',
-    data: { labels, datasets: [
-      { label: 'Income',   data: inc, backgroundColor: 'rgba(5,150,105,.7)',   borderColor: '#059669', borderWidth: 1, borderRadius: 3 },
-      { label: 'Expenses', data: exp, backgroundColor: 'rgba(225,29,72,.7)',   borderColor: '#e11d48', borderWidth: 1, borderRadius: 3 }
-    ]},
+    data: {
+      labels, datasets: [
+        { label: 'Income', data: inc, backgroundColor: 'rgba(5,150,105,.7)', borderColor: '#059669', borderWidth: 1, borderRadius: 3 },
+        { label: 'Expenses', data: exp, backgroundColor: 'rgba(225,29,72,.7)', borderColor: '#e11d48', borderWidth: 1, borderRadius: 3 }
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 }},
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` }}
+        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8' }},
-        y: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) }}
+        x: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8' } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) } }
       }
     }
   });
@@ -1183,25 +1204,25 @@ function drawTrend(allKeys) {
 
 function drawMonthlyCircle(income, expense, net) {
   const cv = document.getElementById('monthly-circle'); if (!cv) return;
-  const savings    = Math.max(0, net);
-  const spent      = Math.min(income, expense);
-  const overspend  = Math.max(0, expense - income);
+  const savings = Math.max(0, net);
+  const spent = Math.min(income, expense);
+  const overspend = Math.max(0, expense - income);
 
   let data, labels, colors, borders;
   if (income > 0 && expense <= income) {
-    data    = [spent, savings];
-    labels  = ['Spent', 'Saved'];
-    colors  = ['rgba(225,29,72,.85)', 'rgba(37,99,235,.75)'];
+    data = [spent, savings];
+    labels = ['Spent', 'Saved'];
+    colors = ['rgba(225,29,72,.85)', 'rgba(37,99,235,.75)'];
     borders = ['#e11d48', '#2563eb'];
   } else if (income > 0 && expense > income) {
-    data    = [income, overspend];
-    labels  = ['Income', 'Over Budget'];
-    colors  = ['rgba(5,150,105,.85)', 'rgba(157,23,77,.9)'];
+    data = [income, overspend];
+    labels = ['Income', 'Over Budget'];
+    colors = ['rgba(5,150,105,.85)', 'rgba(157,23,77,.9)'];
     borders = ['#059669', '#9d174d'];
   } else {
-    data    = [expense];
-    labels  = ['Expenses'];
-    colors  = ['rgba(225,29,72,.85)'];
+    data = [expense];
+    labels = ['Expenses'];
+    colors = ['rgba(225,29,72,.85)'];
     borders = ['#e11d48'];
   }
 
@@ -1218,12 +1239,14 @@ function drawMonthlyCircle(income, expense, net) {
       responsive: true, maintainAspectRatio: false, cutout: '74%',
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: {
-          label: ctx => {
-            const total = data.reduce((a, b) => a + b, 0) || 1;
-            return ` ${ctx.label}: ${fmt(ctx.raw)} (${Math.round(ctx.raw / total * 100)}%)`;
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const total = data.reduce((a, b) => a + b, 0) || 1;
+              return ` ${ctx.label}: ${fmt(ctx.raw)} (${Math.round(ctx.raw / total * 100)}%)`;
+            }
           }
-        }}
+        }
       }
     }
   });
@@ -1231,30 +1254,34 @@ function drawMonthlyCircle(income, expense, net) {
 
 function drawOverview(d) {
   const cv = document.getElementById('overview'); if (!cv) return;
-  const eI = secTotal(d.estimates.income),   fI = secTotal(d.final.income);
+  const eI = secTotal(d.estimates.income), fI = secTotal(d.final.income);
   const eE = secTotal(d.estimates.expenses), fE = secTotal(d.final.expenses);
   AC.overview = new Chart(cv, {
     type: 'bar',
     data: {
       labels: ['Income', 'Expenses'],
       datasets: [
-        { label: 'Estimated', data: [eI, eE],
+        {
+          label: 'Estimated', data: [eI, eE],
           backgroundColor: ['rgba(5,150,105,.3)', 'rgba(225,29,72,.3)'],
-          borderColor: ['#059669', '#e11d48'], borderWidth: 1.5, borderRadius: 6 },
-        { label: 'Final', data: [fI, fE],
+          borderColor: ['#059669', '#e11d48'], borderWidth: 1.5, borderRadius: 6
+        },
+        {
+          label: 'Final', data: [fI, fE],
           backgroundColor: ['rgba(5,150,105,.75)', 'rgba(225,29,72,.75)'],
-          borderColor: ['#059669', '#e11d48'], borderWidth: 1.5, borderRadius: 6 }
+          borderColor: ['#059669', '#e11d48'], borderWidth: 1.5, borderRadius: 6
+        }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 }},
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` }}
+        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { ...CF, size: 12 }, color: '#475569' }},
-        y: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) }}
+        x: { grid: { display: false }, ticks: { font: { ...CF, size: 12 }, color: '#475569' } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) } }
       }
     }
   });
@@ -1262,7 +1289,7 @@ function drawOverview(d) {
 
 function drawIncomePie(income) {
   const cv = document.getElementById('income-pie'); if (!cv) return;
-  const ICOLS = ['#059669','#0891b2','#7c3aed','#db2777','#d97706','#16a34a','#0369a1','#6d28d9'];
+  const ICOLS = ['#059669', '#0891b2', '#7c3aed', '#db2777', '#d97706', '#16a34a', '#0369a1', '#6d28d9'];
   let entries = Object.entries(income)
     .map(([n, c]) => ({ n, v: catSum(c) })).filter(e => e.v > 0)
     .sort((a, b) => b.v - a.v);
@@ -1272,7 +1299,7 @@ function drawIncomePie(income) {
   } else {
     const top = entries.slice(0, 7), rest = entries.slice(7).reduce((s, e) => s + e.v, 0);
     labels = [...top.map(e => e.n), 'Other']; vals = [...top.map(e => e.v), rest];
-    cols   = [...ICOLS.slice(0, 7), '#94a3b8'];
+    cols = [...ICOLS.slice(0, 7), '#94a3b8'];
   }
   const total = vals.reduce((a, b) => a + b, 0);
   AC.incomePie = new Chart(cv, {
@@ -1281,13 +1308,17 @@ function drawIncomePie(income) {
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '60%',
       plugins: {
-        legend: { position: 'right', labels: { font: { ...CF, size: 10 }, color: '#475569',
-          padding: 6, boxWidth: 10, boxHeight: 10,
-          generateLabels: chart => chart.data.labels.map((lbl, i) => ({
-            text: `${lbl.slice(0, 11)} ${Math.round((vals[i] / total) * 100)}%`,
-            fillStyle: cols[i], hidden: false, index: i
-          }))}},
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} (${Math.round((ctx.raw / total) * 100)}%)` }}
+        legend: {
+          position: 'right', labels: {
+            font: { ...CF, size: 10 }, color: '#475569',
+            padding: 6, boxWidth: 10, boxHeight: 10,
+            generateLabels: chart => chart.data.labels.map((lbl, i) => ({
+              text: `${lbl.slice(0, 11)} ${Math.round((vals[i] / total) * 100)}%`,
+              fillStyle: cols[i], hidden: false, index: i
+            }))
+          }
+        },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} (${Math.round((ctx.raw / total) * 100)}%)` } }
       }
     }
   });
@@ -1299,27 +1330,29 @@ function drawIncomeBar(d) {
   const rows = [...cats].map(n => ({
     n,
     est: catSum(d.estimates.income[n] || { items: [] }),
-    fin: catSum(d.final.income[n]     || { items: [] })
+    fin: catSum(d.final.income[n] || { items: [] })
   })).filter(r => r.est > 0 || r.fin > 0).sort((a, b) => b.est - a.est);
   if (!rows.length) return;
   const labels = rows.map(r => r.n.length > 13 ? r.n.slice(0, 13) + '…' : r.n);
-  const wrap   = document.getElementById('barwrap-inc');
+  const wrap = document.getElementById('barwrap-inc');
   if (wrap) wrap.style.height = `${Math.max(200, rows.length * 36 + 48)}px`;
   AC.incomeBar = new Chart(cv, {
     type: 'bar',
-    data: { labels, datasets: [
-      { label: 'Estimated', data: rows.map(r => r.est), backgroundColor: 'rgba(5,150,105,.5)',  borderColor: '#059669', borderWidth: 1, borderRadius: 3 },
-      { label: 'Final',     data: rows.map(r => r.fin), backgroundColor: 'rgba(8,145,178,.65)', borderColor: '#0891b2', borderWidth: 1, borderRadius: 3 }
-    ]},
+    data: {
+      labels, datasets: [
+        { label: 'Estimated', data: rows.map(r => r.est), backgroundColor: 'rgba(5,150,105,.5)', borderColor: '#059669', borderWidth: 1, borderRadius: 3 },
+        { label: 'Final', data: rows.map(r => r.fin), backgroundColor: 'rgba(8,145,178,.65)', borderColor: '#0891b2', borderWidth: 1, borderRadius: 3 }
+      ]
+    },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 }},
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` }}
+        legend: { position: 'top', labels: { font: { ...CF, size: 11 }, color: '#475569', boxWidth: 12, boxHeight: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
       },
       scales: {
-        x: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) }},
-        y: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#475569' }}
+        x: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v) } },
+        y: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#475569' } }
       }
     }
   });
@@ -1327,34 +1360,36 @@ function drawIncomeBar(d) {
 
 function drawNetTrend(allKeys) {
   const cv = document.getElementById('net-trend'); if (!cv) return;
-  const last   = allKeys.slice(-8);
+  const last = allKeys.slice(-8);
   const labels = last.map(k => {
     const [yr, mo] = k.split('-');
     return MONTHS[parseInt(mo) - 1].slice(0, 3) + ' \'' + yr.slice(2);
   });
   const nets = last.map(k => {
     const dd = S.data[k] || makeMonth();
-    return (secTotal(dd.final.income)   || secTotal(dd.estimates.income)) -
-           (secTotal(dd.final.expenses) || secTotal(dd.estimates.expenses));
+    return (secTotal(dd.final.income) || secTotal(dd.estimates.income)) -
+      (secTotal(dd.final.expenses) || secTotal(dd.estimates.expenses));
   });
   AC.netTrend = new Chart(cv, {
     type: 'line',
-    data: { labels, datasets: [{
-      label: 'Net Balance', data: nets,
-      borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)',
-      borderWidth: 2, pointRadius: 4,
-      pointBackgroundColor: nets.map(v => v >= 0 ? '#059669' : '#e11d48'),
-      fill: true, tension: 0.3
-    }]},
+    data: {
+      labels, datasets: [{
+        label: 'Net Balance', data: nets,
+        borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)',
+        borderWidth: 2, pointRadius: 4,
+        pointBackgroundColor: nets.map(v => v >= 0 ? '#059669' : '#e11d48'),
+        fill: true, tension: 0.3
+      }]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` Net: ${fmt(ctx.raw, true)}` }}
+        tooltip: { callbacks: { label: ctx => ` Net: ${fmt(ctx.raw, true)}` } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8' }},
-        y: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v, true) }}
+        x: { grid: { display: false }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8' } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { font: { ...CF, size: 10 }, color: '#94a3b8', callback: v => fmt(v, true) } }
       }
     }
   });
@@ -1362,8 +1397,8 @@ function drawNetTrend(allKeys) {
 
 /* ─── 15. UTILITIES ─────────────────────────────────────── */
 function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 let _tid;
@@ -1384,24 +1419,24 @@ document.getElementById('main-content').addEventListener('click', e => {
   const { a, type, mode, cat, id } = t.dataset;
   const catName = cat ? decodeURIComponent(cat) : null;
 
-  if      (a === 'tcat')    { if (e.target.closest('[data-a="dcat"]')) return; toggleCat(type, mode, catName); }
-  else if (a === 'dcat')    { if (confirm(`Delete "${catName}" and all its items?`)) delCat(type, mode, catName); }
-  else if (a === 'ditem')   delItem(type, mode, catName, id);
-  else if (a === 'aitem')   addItem(type, mode, catName);
-  else if (a === 'addcat')  openModal(type, mode);
-  else if (a === 'xcsv')    exportCSV(t.dataset.mode);
-  else if (a === 'print')   window.print();
-  else if (a === 'browse')  document.getElementById('file-input').click();
-  else if (a === 'tpl')     dlTemplate();
-  else if (a === 'copy')    copyFromEst();
-  else if (a === 'gs-connect')  gsConnect();
-  else if (a === 'gs-push')     pushToSheets();
-  else if (a === 'gs-pull')     { if (confirm('Pull from Sheets? Local data will be overwritten.')) pullFromSheets(); }
-  else if (a === 'gs-disc')     { if (confirm('Disconnect? Local data is kept.')) gsDisconnect(); }
+  if (a === 'tcat') { if (e.target.closest('[data-a="dcat"]')) return; toggleCat(type, mode, catName); }
+  else if (a === 'dcat') { if (confirm(`Delete "${catName}" and all its items?`)) delCat(type, mode, catName); }
+  else if (a === 'ditem') delItem(type, mode, catName, id);
+  else if (a === 'aitem') addItem(type, mode, catName);
+  else if (a === 'addcat') openModal(type, mode);
+  else if (a === 'xcsv') exportCSV(t.dataset.mode);
+  else if (a === 'print') window.print();
+  else if (a === 'browse') document.getElementById('file-input').click();
+  else if (a === 'tpl') dlTemplate();
+  else if (a === 'copy') copyFromEst();
+  else if (a === 'gs-connect') gsConnect();
+  else if (a === 'gs-push') pushToSheets();
+  else if (a === 'gs-pull') { if (confirm('Pull from Sheets? Local data will be overwritten.')) pullFromSheets(); }
+  else if (a === 'gs-disc') { if (confirm('Disconnect? Local data is kept.')) gsDisconnect(); }
   else if (a === 'guide-toggle') toggleGuide();
-  else if (a === 'copy-script')  copyScript();
-  else if (a === 'export-all')   exportAllCSV();
-  else if (a === 'clear-all')    clearAllData();
+  else if (a === 'copy-script') copyScript();
+  else if (a === 'export-all') exportAllCSV();
+  else if (a === 'clear-all') clearAllData();
 });
 
 /* Main content — input delegation */
@@ -1410,7 +1445,7 @@ document.getElementById('main-content').addEventListener('input', e => {
   const { a, type, mode, cat, id } = t.dataset;
   const catName = decodeURIComponent(cat);
   if (a === 'uamt') { mutItem(type, mode, catName, id, item => { item.amount = parseFloat(t.value) || 0; }); updTotals(mode); }
-  if (a === 'uname')  mutItem(type, mode, catName, id, item => { item.name = t.value; });
+  if (a === 'uname') mutItem(type, mode, catName, id, item => { item.name = t.value; });
 });
 
 /* Main content — change delegation */
