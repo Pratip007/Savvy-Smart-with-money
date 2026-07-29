@@ -30,104 +30,197 @@ const DEF_EXPENSES = [
 
 const GS_KEY = 'gs_url_v1';
 
-const GAS_CODE = `var SHEET = 'Budget';
+const GAS_CODE = `var DATA_SHEET = '_Data';
+var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+/* ── READ: return raw sync data for the app to pull ── */
 function doGet(e) {
-  var s = getOrCreate();
-  var rows = s.getLastRow() > 0 ? s.getDataRange().getValues() : [];
-  return out(JSON.stringify({ ok: true, rows: rows }));
+  var ss = getSpreadsheet();
+  var ds = ss.getSheetByName(DATA_SHEET);
+  var rows = ds && ds.getLastRow() > 0 ? ds.getDataRange().getValues() : [];
+  return respond(JSON.stringify({ ok: true, rows: rows }));
 }
 
+/* ── WRITE: save raw data + rebuild one sheet per month ── */
 function doPost(e) {
   var p = JSON.parse(e.postData.contents);
-  var s = getOrCreate();
-  s.clearContents();
-  s.clearFormats();
+  var ss = getSpreadsheet();
   if (p.rows && p.rows.length) {
-    var numRows = p.rows.length;
-    var numCols = p.rows[0].length;
-    var range = s.getRange(1, 1, numRows, numCols);
-    // Treat all columns as text to prevent YYYY-MM being auto-converted to a Date
-    range.setNumberFormat('@');
-    // Amount column (col 6) gets proper number format — set BEFORE writing values
-    if (numRows > 1 && numCols >= 6) {
-      s.getRange(2, 6, numRows - 1, 1).setNumberFormat('#,##0.00');
-    }
-    range.setValues(p.rows);
-    formatSheet(s, numRows, numCols);
+    saveRaw(ss, p.rows);
+    buildSheets(ss, p.rows);
   }
-  return out(JSON.stringify({ ok: true }));
+  return respond(JSON.stringify({ ok: true }));
 }
 
-function formatSheet(s, numRows, numCols) {
-  // Header row
-  var hdr = s.getRange(1, 1, 1, numCols);
-  hdr.setBackground('#1e3a8a');
-  hdr.setFontColor('#ffffff');
-  hdr.setFontWeight('bold');
-  hdr.setFontSize(11);
-  hdr.setVerticalAlignment('middle');
-  hdr.setHorizontalAlignment('center');
-  s.setRowHeight(1, 38);
-  s.setFrozenRows(1);
+/* Save flat rows to hidden _Data sheet (used by doGet / pull) */
+function saveRaw(ss, rows) {
+  var s = ss.getSheetByName(DATA_SHEET) || ss.insertSheet(DATA_SHEET);
+  s.clearContents(); s.clearFormats();
+  s.getRange(1, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows);
+  s.hideSheet();
+}
 
-  if (numRows > 1) {
-    var dataRange = s.getRange(2, 1, numRows - 1, numCols);
-    dataRange.setFontSize(10);
-    dataRange.setVerticalAlignment('middle');
+/* Create / update one formatted sheet per month */
+function buildSheets(ss, rows) {
+  var months = {};
+  rows.slice(1).forEach(function(r) {
+    var k = String(r[0]); if (!k) return;
+    if (!months[k]) months[k] = [];
+    months[k].push(r);
+  });
+  var keys = Object.keys(months).sort();
+  var names = keys.map(keyName);
 
-    // Alternating row colors via conditional formatting
-    var evenRule = SpreadsheetApp.newConditionalFormatRule()
-      .setBackground('#eef2ff')
-      .whenFormulaSatisfied('=MOD(ROW(),2)=0')
-      .setRanges([dataRange])
-      .build();
-    var oddRule = SpreadsheetApp.newConditionalFormatRule()
-      .setBackground('#ffffff')
-      .whenFormulaSatisfied('=MOD(ROW(),2)=1')
-      .setRanges([dataRange])
-      .build();
-    s.setConditionalFormatRules([evenRule, oddRule]);
+  // Remove sheets for months no longer in the data
+  ss.getSheets().forEach(function(s) {
+    if (s.getName() !== DATA_SHEET && names.indexOf(s.getName()) < 0) ss.deleteSheet(s);
+  });
 
-    // Amount column: right-align header and data
-    s.getRange(1, 6, 1, 1).setHorizontalAlignment('right');
-    s.getRange(2, 6, numRows - 1, 1).setHorizontalAlignment('right');
+  // Build each month sheet and place in chronological order
+  keys.forEach(function(k, i) {
+    var s = ss.getSheetByName(keyName(k)) || ss.insertSheet(keyName(k));
+    paintSheet(s, k, months[k]);
+    ss.setActiveSheet(s);
+    ss.moveActiveSheet(i + 1);
+  });
+}
 
-    // ID column: small muted text (internal use)
-    s.getRange(1, 7, numRows, 1).setFontColor('#aaaaaa').setFontSize(9);
-  }
+function keyName(k) {
+  var p = k.split('-');
+  return MN[parseInt(p[1]) - 1] + ' ' + p[0];  // e.g. "Jul 2026"
+}
+
+/* Build the layout for a single month sheet */
+function paintSheet(sheet, key, rows) {
+  sheet.clearContents(); sheet.clearFormats(); sheet.setConditionalFormatRules([]);
+
+  // Parse flat rows into income / expense maps
+  var inc = {}, exp = {};
+  rows.forEach(function(r) {
+    var mode = String(r[1]).toLowerCase();   // 'estimate' | 'actual'
+    var type = String(r[2]).toLowerCase();   // 'income'   | 'expense'
+    var cat  = String(r[3]), item = String(r[4]), amt = parseFloat(r[5]) || 0;
+    var sec  = (type === 'income') ? inc : exp;
+    if (!sec[cat]) sec[cat] = {};
+    if (!sec[cat][item]) sec[cat][item] = { e: 0, a: 0 };
+    if (mode === 'estimate') sec[cat][item].e = amt; else sec[cat][item].a = amt;
+  });
+
+  // Build output rows (R) and their display types (T)
+  var R = [], T = [];
+  function add(v, t) { R.push(v); T.push(t); }
+
+  add([keyName(key) + '   —   Monthly Budget', '', '', '', ''], 'title');
+  add(['', '', '', '', ''], 'gap');
+  add(['Category', 'Item', 'Estimate', 'Actual', 'Difference'], 'head');
+
+  // Income section
+  add(['INCOME', '', '', '', ''], 'sec-inc');
+  var eI = 0, aI = 0;
+  Object.keys(inc).sort().forEach(function(cat) {
+    Object.keys(inc[cat]).sort().forEach(function(item) {
+      var d = inc[cat][item];
+      add([cat, item, d.e, d.a, d.a - d.e], 'data-inc');
+      eI += d.e; aI += d.a;
+    });
+  });
+  add(['Total Income', '', eI, aI, aI - eI], 'tot-inc');
+  add(['', '', '', '', ''], 'gap');
+
+  // Expense section
+  add(['EXPENSES', '', '', '', ''], 'sec-exp');
+  var eE = 0, aE = 0;
+  Object.keys(exp).sort().forEach(function(cat) {
+    Object.keys(exp[cat]).sort().forEach(function(item) {
+      var d = exp[cat][item];
+      add([cat, item, d.e, d.a, d.a - d.e], 'data-exp');
+      eE += d.e; aE += d.a;
+    });
+  });
+  add(['Total Expenses', '', eE, aE, aE - eE], 'tot-exp');
+  add(['', '', '', '', ''], 'gap');
+
+  // Net balance
+  add(['Net Balance', '', eI - eE, aI - aE, (aI - aE) - (eI - eE)], 'net');
+
+  sheet.getRange(1, 1, R.length, 5).setValues(R);
+  applyStyles(sheet, T, R);
+}
+
+/* Apply all formatting in bulk for performance */
+function applyStyles(sheet, T, R) {
+  var n = T.length;
+  var BG = [], FC = [], FW = [], FS = [], HA = [];
+
+  T.forEach(function(t, i) {
+    var diff = R[i][4];
+    var bg = '#ffffff', fc = '#1f2937', fw = 'normal', fs = 10;
+    var ha = ['left', 'left', 'right', 'right', 'right'];
+
+    if      (t === 'title')   { bg='#1e3a8a'; fc='#ffffff'; fw='bold'; fs=14; ha=['center','center','center','center','center']; }
+    else if (t === 'head')    { bg='#1d4ed8'; fc='#ffffff'; fw='bold'; }
+    else if (t === 'sec-inc') { bg='#dcfce7'; fc='#14532d'; fw='bold'; }
+    else if (t === 'sec-exp') { bg='#fee2e2'; fc='#7f1d1d'; fw='bold'; }
+    else if (t === 'data-inc' || t === 'data-exp') { bg = (i % 2 === 0) ? '#f8fafc' : '#ffffff'; }
+    else if (t === 'tot-inc') { bg='#bbf7d0'; fw='bold'; }
+    else if (t === 'tot-exp') { bg='#fecaca'; fw='bold'; }
+    else if (t === 'net')     { bg='#1e3a8a'; fc='#ffffff'; fw='bold'; fs=11; }
+
+    // Color-code the Difference cell: green = good, red = bad
+    var fc5 = [fc, fc, fc, fc, fc];
+    if (t === 'data-inc' || t === 'tot-inc')
+      fc5[4] = diff >= 0 ? '#15803d' : '#b91c1c';
+    else if (t === 'data-exp' || t === 'tot-exp')
+      fc5[4] = diff <= 0 ? '#15803d' : '#b91c1c';
+    else if (t === 'net')
+      fc5[4] = diff >= 0 ? '#86efac' : '#fca5a5';
+
+    BG.push([bg,bg,bg,bg,bg]); FC.push(fc5);
+    FW.push([fw,fw,fw,fw,fw]); FS.push([fs,fs,fs,fs,fs]); HA.push(ha);
+  });
+
+  // Bulk-apply styles (minimises API calls)
+  var rng = sheet.getRange(1, 1, n, 5);
+  rng.setBackgrounds(BG).setFontColors(FC).setFontWeights(FW)
+     .setFontSizes(FS).setHorizontalAlignments(HA).setVerticalAlignment('middle');
+
+  // Number format for numeric columns (rows 4 onward = after title+gap+head)
+  sheet.getRange(4, 3, n - 3, 3).setNumberFormat('#,##0.00');
+
+  // Row heights: set default first, then override non-default rows
+  var H = { title:48, gap:8, head:32, 'sec-inc':30, 'sec-exp':30,
+            'tot-inc':30, 'tot-exp':30, net:36, 'data-inc':26, 'data-exp':26 };
+  sheet.setRowHeights(1, n, 26);
+  T.forEach(function(t, i) { var h = H[t]; if (h && h !== 26) sheet.setRowHeight(i+1, h); });
 
   // Column widths
-  s.setColumnWidth(1, 90);   // Month
-  s.setColumnWidth(2, 100);  // Budget Type
-  s.setColumnWidth(3, 115);  // Category Type
-  s.setColumnWidth(4, 135);  // Category
-  s.setColumnWidth(5, 165);  // Item
-  s.setColumnWidth(6, 105);  // Amount
-  s.setColumnWidth(7, 65);   // ID
+  sheet.setColumnWidth(1, 145);
+  sheet.setColumnWidth(2, 175);
+  sheet.setColumnWidths(3, 3, 120);
+
+  // Merge title row and section header rows across all 5 columns
+  sheet.getRange(1, 1, 1, 5).mergeAcross();
+  T.forEach(function(t, i) {
+    if (t === 'sec-inc' || t === 'sec-exp') sheet.getRange(i+1, 1, 1, 5).mergeAcross();
+  });
+
+  sheet.setFrozenRows(3);    // title + gap + column header always visible
+  sheet.setTabColor('#1e3a8a');
 }
 
-function getOrCreate() {
+function getSpreadsheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
     var props = PropertiesService.getScriptProperties();
-    var ssId  = props.getProperty('SPREADSHEET_ID');
-    if (ssId) {
-      try { ss = SpreadsheetApp.openById(ssId); }
-      catch(e) { ss = null; }
-    }
-    if (!ss) {
-      ss = SpreadsheetApp.create('Savvy Budget');
-      props.setProperty('SPREADSHEET_ID', ss.getId());
-    }
+    var ssId = props.getProperty('SPREADSHEET_ID');
+    if (ssId) { try { ss = SpreadsheetApp.openById(ssId); } catch(e) { ss = null; } }
+    if (!ss) { ss = SpreadsheetApp.create('Savvy Budget'); props.setProperty('SPREADSHEET_ID', ss.getId()); }
   }
-  return ss.getSheetByName(SHEET) || ss.insertSheet(SHEET);
+  return ss;
 }
 
-function out(txt) {
-  return ContentService
-    .createTextOutput(txt)
-    .setMimeType(ContentService.MimeType.JSON);
+function respond(txt) {
+  return ContentService.createTextOutput(txt).setMimeType(ContentService.MimeType.JSON);
 }`;
 
 const CURRENCIES = [
