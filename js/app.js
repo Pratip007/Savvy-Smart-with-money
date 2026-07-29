@@ -35,29 +35,41 @@ var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec
 
 /* ── READ: return raw sync data for the app to pull ── */
 function doGet(e) {
-  var ss = getSpreadsheet();
-  var ds = ss.getSheetByName(DATA_SHEET);
-  var rows = ds && ds.getLastRow() > 0 ? ds.getDataRange().getValues() : [];
-  return respond(JSON.stringify({ ok: true, rows: rows }));
+  try {
+    var ss = getSpreadsheet();
+    var ds = ss.getSheetByName(DATA_SHEET);
+    var rows = ds && ds.getLastRow() > 0 ? ds.getDataRange().getValues() : [];
+    return respond(JSON.stringify({ ok: true, rows: rows }));
+  } catch(err) {
+    return respond(JSON.stringify({ ok: false, error: err.message }));
+  }
 }
 
 /* ── WRITE: save raw data + rebuild one sheet per month ── */
 function doPost(e) {
-  var p = JSON.parse(e.postData.contents);
-  var ss = getSpreadsheet();
-  if (p.rows && p.rows.length) {
-    saveRaw(ss, p.rows);
-    buildSheets(ss, p.rows);
+  try {
+    var p = JSON.parse(e.postData.contents);
+    var ss = getSpreadsheet();
+    if (p.rows && p.rows.length) {
+      saveRaw(ss, p.rows);          // write _Data (visible for now)
+      buildSheets(ss, p.rows);      // build month sheets
+      // Hide _Data only after month sheets exist (Sheets requires 1 visible sheet)
+      var ds = ss.getSheetByName(DATA_SHEET);
+      if (ds) try { ds.hideSheet(); } catch(x) {}
+    }
+    return respond(JSON.stringify({ ok: true }));
+  } catch(err) {
+    // Always return JSON so CORS headers are present even on error
+    return respond(JSON.stringify({ ok: false, error: err.message }));
   }
-  return respond(JSON.stringify({ ok: true }));
 }
 
-/* Save flat rows to hidden _Data sheet (used by doGet / pull) */
+/* Save flat rows to _Data sheet (not hidden yet — caller hides after month sheets are built) */
 function saveRaw(ss, rows) {
   var s = ss.getSheetByName(DATA_SHEET) || ss.insertSheet(DATA_SHEET);
   s.clearContents(); s.clearFormats();
   s.getRange(1, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows);
-  s.hideSheet();
+  s.setTabColor('#999999');
 }
 
 /* Create / update one formatted sheet per month */
