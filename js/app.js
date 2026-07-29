@@ -34,8 +34,7 @@ const GAS_CODE = `var SHEET = 'Budget';
 
 function doGet(e) {
   var s = getOrCreate();
-  var rows = s.getLastRow() > 0
-    ? s.getDataRange().getValues() : [];
+  var rows = s.getLastRow() > 0 ? s.getDataRange().getValues() : [];
   return out(JSON.stringify({ ok: true, rows: rows }));
 }
 
@@ -43,12 +42,69 @@ function doPost(e) {
   var p = JSON.parse(e.postData.contents);
   var s = getOrCreate();
   s.clearContents();
+  s.clearFormats();
   if (p.rows && p.rows.length) {
-    var range = s.getRange(1,1,p.rows.length,p.rows[0].length);
+    var numRows = p.rows.length;
+    var numCols = p.rows[0].length;
+    var range = s.getRange(1, 1, numRows, numCols);
+    // Treat all columns as text to prevent YYYY-MM being auto-converted to a Date
     range.setNumberFormat('@');
+    // Amount column (col 6) gets proper number format — set BEFORE writing values
+    if (numRows > 1 && numCols >= 6) {
+      s.getRange(2, 6, numRows - 1, 1).setNumberFormat('#,##0.00');
+    }
     range.setValues(p.rows);
+    formatSheet(s, numRows, numCols);
   }
   return out(JSON.stringify({ ok: true }));
+}
+
+function formatSheet(s, numRows, numCols) {
+  // Header row
+  var hdr = s.getRange(1, 1, 1, numCols);
+  hdr.setBackground('#1e3a8a');
+  hdr.setFontColor('#ffffff');
+  hdr.setFontWeight('bold');
+  hdr.setFontSize(11);
+  hdr.setVerticalAlignment('middle');
+  hdr.setHorizontalAlignment('center');
+  s.setRowHeight(1, 38);
+  s.setFrozenRows(1);
+
+  if (numRows > 1) {
+    var dataRange = s.getRange(2, 1, numRows - 1, numCols);
+    dataRange.setFontSize(10);
+    dataRange.setVerticalAlignment('middle');
+
+    // Alternating row colors via conditional formatting
+    var evenRule = SpreadsheetApp.newConditionalFormatRule()
+      .setBackground('#eef2ff')
+      .whenFormulaSatisfied('=MOD(ROW(),2)=0')
+      .setRanges([dataRange])
+      .build();
+    var oddRule = SpreadsheetApp.newConditionalFormatRule()
+      .setBackground('#ffffff')
+      .whenFormulaSatisfied('=MOD(ROW(),2)=1')
+      .setRanges([dataRange])
+      .build();
+    s.setConditionalFormatRules([evenRule, oddRule]);
+
+    // Amount column: right-align header and data
+    s.getRange(1, 6, 1, 1).setHorizontalAlignment('right');
+    s.getRange(2, 6, numRows - 1, 1).setHorizontalAlignment('right');
+
+    // ID column: small muted text (internal use)
+    s.getRange(1, 7, numRows, 1).setFontColor('#aaaaaa').setFontSize(9);
+  }
+
+  // Column widths
+  s.setColumnWidth(1, 90);   // Month
+  s.setColumnWidth(2, 100);  // Budget Type
+  s.setColumnWidth(3, 115);  // Category Type
+  s.setColumnWidth(4, 135);  // Category
+  s.setColumnWidth(5, 165);  // Item
+  s.setColumnWidth(6, 105);  // Amount
+  s.setColumnWidth(7, 65);   // ID
 }
 
 function getOrCreate() {
@@ -961,30 +1017,57 @@ function getGSURL() { return localStorage.getItem(GS_KEY) || ''; }
 function saveGSURL(u) { if (u) localStorage.setItem(GS_KEY, u); else localStorage.removeItem(GS_KEY); }
 
 function dataToRows(allData) {
-  const rows = [['Month', 'Mode', 'Type', 'Category', 'Sub-category', 'Item ID', 'Amount']];
-  Object.entries(allData).forEach(([month, md]) => {
-    ['estimates', 'final'].forEach(mode => {
-      ['income', 'expenses'].forEach(type => {
-        const sec = md?.[mode]?.[type]; if (!sec) return;
-        Object.entries(sec).forEach(([cat, catData]) => {
-          catData.items.forEach(item => {
-            rows.push([month, mode, type, cat, item.name, item.id, item.amount]);
+  const rows = [['Month', 'Budget Type', 'Category Type', 'Category', 'Item', 'Amount', 'ID']];
+  Object.entries(allData)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([month, md]) => {
+      ['estimates', 'final'].forEach(mode => {
+        ['income', 'expenses'].forEach(type => {
+          const sec = md?.[mode]?.[type]; if (!sec) return;
+          const modeLabel = mode === 'estimates' ? 'Estimate' : 'Actual';
+          const typeLabel = type === 'income' ? 'Income' : 'Expense';
+          Object.entries(sec).forEach(([cat, catData]) => {
+            catData.items.forEach(item => {
+              rows.push([month, modeLabel, typeLabel, cat, item.name, item.amount, item.id]);
+            });
           });
         });
       });
     });
-  });
   return rows;
 }
 
 function rowsToData(rows) {
   const data = {};
   if (!rows || rows.length < 2) return data;
+  // Detect column positions from the header row (handles both old and new formats)
+  const hdr = rows[0].map(c => String(c ?? '').toLowerCase().trim());
+  const COL = {
+    month:  hdr.indexOf('month'),
+    mode:   hdr.findIndex(h => h === 'mode' || h === 'budget type'),
+    type:   hdr.findIndex(h => h === 'type' || h === 'category type'),
+    cat:    hdr.findIndex(h => h === 'category'),
+    item:   hdr.findIndex(h => h === 'sub-category' || h === 'item'),
+    amount: hdr.indexOf('amount'),
+    id:     hdr.findIndex(h => h === 'item id' || h === 'id'),
+  };
+  const modeMap = { estimates: 'estimates', estimate: 'estimates', final: 'final', actual: 'final' };
+  const typeMap = { income: 'income', expenses: 'expenses', expense: 'expenses' };
   rows.slice(1).forEach(row => {
-    let [month, mode, type, cat, itemName, itemId, amount] = row.map(c => String(c ?? ''));
-    // Google Sheets auto-converts 'YYYY-MM' to a Date; extract YYYY-MM back
+    const c = row.map(x => String(x ?? ''));
+    let month    = COL.month  >= 0 ? c[COL.month]  : c[0];
+    let mode     = COL.mode   >= 0 ? c[COL.mode]   : c[1];
+    let type     = COL.type   >= 0 ? c[COL.type]   : c[2];
+    const cat      = COL.cat    >= 0 ? c[COL.cat]    : c[3];
+    const itemName = COL.item   >= 0 ? c[COL.item]   : c[4];
+    const amount   = COL.amount >= 0 ? c[COL.amount] : c[6];
+    const itemId   = COL.id     >= 0 ? c[COL.id]     : c[5];
+    // Google Sheets may auto-convert YYYY-MM keys to a Date string
     const dm = month.match(/^(\d{4})-(\d{2})/);
     if (dm) month = dm[1] + '-' + dm[2];
+    // Normalize labels (supports both old lowercase and new capitalized values)
+    mode = modeMap[mode.toLowerCase()] || mode;
+    type = typeMap[type.toLowerCase()] || type;
     if (!month || !mode || !type || !cat) return;
     if (!data[month]) data[month] = {
       estimates: { income: {}, expenses: {} },
