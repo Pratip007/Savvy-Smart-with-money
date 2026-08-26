@@ -18,8 +18,11 @@ export class GoogleAuthService {
   readonly userProfile = signal<UserProfile | null>(null);
   readonly isAuthorized = computed(() => !!this.accessToken());
 
-  // All scopes needed: Drive file access, Sheets read/write, Gmail read
+  // All scopes needed: profile info, Drive file access, Sheets read/write, Gmail read
   private readonly SCOPES = [
+    'openid',
+    'profile',
+    'email',
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/gmail.readonly',
