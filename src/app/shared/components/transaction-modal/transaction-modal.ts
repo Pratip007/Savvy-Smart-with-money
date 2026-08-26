@@ -48,7 +48,7 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
                  placeholder="0" min="0" step="0.01" inputmode="decimal">
         </div>
 
-        <!-- Date · Time · Note row -->
+        <!-- Date · Time row -->
         <div class="at-meta-row">
           <div class="at-date-wrap">
             <i class="fa-solid fa-calendar-days"></i>
@@ -58,15 +58,6 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           <div class="at-time-wrap">
             <i class="fa-solid fa-clock"></i>
             <input class="at-time-input" type="time" [(ngModel)]="time">
-          </div>
-          <div class="at-note-wrap" [class.detected]="autoDetected()">
-            <i class="fa-solid fa-pen-to-square"></i>
-            <input class="at-note-input" type="text" [(ngModel)]="note"
-                   placeholder="Note…" maxlength="80" autocomplete="off"
-                   (input)="onNoteInput($event)">
-            @if (autoDetected()) {
-              <i class="fa-solid fa-wand-magic-sparkles at-auto-icon" title="Auto-detected"></i>
-            }
           </div>
         </div>
 
@@ -114,6 +105,18 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
             <button class="at-item-chip" [class.active]="item===i" (click)="item=i">
               {{ i }}
             </button>
+          }
+        </div>
+
+        <!-- Note -->
+        <p class="at-label">Note <span class="at-label-opt">(optional)</span></p>
+        <div class="at-note-wrap" [class.detected]="autoDetected()">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <input class="at-note-input" type="text" [(ngModel)]="note"
+                 placeholder="e.g. Zomato, Big Bazaar…" maxlength="80" autocomplete="off"
+                 (input)="onNoteInput($event)">
+          @if (autoDetected()) {
+            <i class="fa-solid fa-wand-magic-sparkles at-auto-icon" title="Auto-detected category"></i>
           }
         </div>
 
