@@ -479,30 +479,50 @@ export class SheetsService {
 
   // ── Sheets API calls ──────────────────────────────────────────────────────────
 
+  private async fetchWithRetry(label: string, fn: () => Promise<Response>): Promise<Response> {
+    const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+    let delay = 1000;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await fn();
+      if (res.ok || !RETRYABLE.has(res.status)) return res;
+      if (attempt === 3) return res;
+      console.warn(`${label} ${res.status} — retrying in ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+    return fn();
+  }
+
   private async valuesWrite(token: string, sid: string, data: { range: string; values: any[][] }[]): Promise<void> {
-    const res = await fetch(`${SHEETS_BASE}/${sid}/values:batchUpdate`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ valueInputOption: 'RAW', data }),
-    });
+    const res = await this.fetchWithRetry('Values write', () =>
+      fetch(`${SHEETS_BASE}/${sid}/values:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valueInputOption: 'RAW', data }),
+      })
+    );
     if (!res.ok) throw new Error(`Values write ${res.status}: ${await res.text()}`);
   }
 
   private async valuesRead(token: string, sid: string, ranges: string[]): Promise<any> {
     const params = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
-    const res = await fetch(`${SHEETS_BASE}/${sid}/values:batchGet?${params}`, {
-      headers: { Authorization: 'Bearer ' + token },
-    });
+    const res = await this.fetchWithRetry('Values read', () =>
+      fetch(`${SHEETS_BASE}/${sid}/values:batchGet?${params}`, {
+        headers: { Authorization: 'Bearer ' + token },
+      })
+    );
     if (!res.ok) throw new Error(`Values read ${res.status}: ${await res.text()}`);
     return res.json();
   }
 
   private async formatWrite(token: string, sid: string, requests: any[]): Promise<void> {
-    const res = await fetch(`${SHEETS_BASE}/${sid}:batchUpdate`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests }),
-    });
+    const res = await this.fetchWithRetry('Format write', () =>
+      fetch(`${SHEETS_BASE}/${sid}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests }),
+      })
+    );
     if (!res.ok) throw new Error(`Format write ${res.status}: ${await res.text()}`);
   }
 

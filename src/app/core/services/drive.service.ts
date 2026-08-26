@@ -101,18 +101,20 @@ export class DriveService {
 
     // Create spreadsheet with 3 sheets: two internal data sheets + one always-visible
     // "Overview" sheet. Google forbids hiding ALL sheets, so Overview acts as the anchor.
-    const created = await fetch(SHEETS_API, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        properties: { title: fileName },
-        sheets: [
-          { properties: { title: '_Data' } },
-          { properties: { title: '_Transactions' } },
-          { properties: { title: 'Overview' } },
-        ],
-      }),
-    });
+    const created = await this.fetchWithRetry('Create spreadsheet', () =>
+      fetch(SHEETS_API, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          properties: { title: fileName },
+          sheets: [
+            { properties: { title: '_Data' } },
+            { properties: { title: '_Transactions' } },
+            { properties: { title: 'Overview' } },
+          ],
+        }),
+      })
+    );
     if (!created.ok) throw new Error(`Create spreadsheet ${created.status}: ${await created.text()}`);
     const file = await created.json();
     const fileId: string = file.spreadsheetId;
@@ -128,9 +130,11 @@ export class DriveService {
     });
 
     // Move into the Savvy folder
-    await fetch(
-      `${DRIVE_API}/files/${fileId}?addParents=${folderId}&removeParents=root&fields=id`,
-      { method: 'PATCH', headers: { Authorization: 'Bearer ' + token } }
+    await this.fetchWithRetry('Move file', () =>
+      fetch(
+        `${DRIVE_API}/files/${fileId}?addParents=${folderId}&removeParents=root&fields=id`,
+        { method: 'PATCH', headers: { Authorization: 'Bearer ' + token } }
+      )
     );
 
     return fileId;
@@ -138,28 +142,48 @@ export class DriveService {
 
   // ── HTTP helpers ─────────────────────────────────────────────────────────────
 
+  private async fetchWithRetry(label: string, fn: () => Promise<Response>): Promise<Response> {
+    const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+    let delay = 1000;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await fn();
+      if (res.ok || !RETRYABLE.has(res.status)) return res;
+      if (attempt === 3) return res;
+      console.warn(`${label} ${res.status} — retrying in ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+    return fn();
+  }
+
   private async get(url: string, token: string): Promise<any> {
-    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    const res = await this.fetchWithRetry(`Drive GET`, () =>
+      fetch(url, { headers: { Authorization: 'Bearer ' + token } })
+    );
     if (!res.ok) throw new Error(`Drive GET ${res.status}: ${await res.text()}`);
     return res.json();
   }
 
   private async drivePost(token: string, body: any): Promise<any> {
-    const res = await fetch(`${DRIVE_API}/files`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const res = await this.fetchWithRetry(`Drive POST`, () =>
+      fetch(`${DRIVE_API}/files`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    );
     if (!res.ok) throw new Error(`Drive POST ${res.status}: ${await res.text()}`);
     return res.json();
   }
 
   private async sheetsPost(spreadsheetId: string, token: string, body: any): Promise<any> {
-    const res = await fetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const res = await this.fetchWithRetry('Sheets batchUpdate', () =>
+      fetch(`${SHEETS_API}/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    );
     if (!res.ok) throw new Error(`Sheets batchUpdate ${res.status}: ${await res.text()}`);
     return res.json();
   }
