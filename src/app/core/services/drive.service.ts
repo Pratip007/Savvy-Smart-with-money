@@ -99,21 +99,32 @@ export class DriveService {
     const list = await this.get(`${DRIVE_API}/files?q=${q}&fields=files(id)&pageSize=1`, token);
     if (list.files?.length > 0) return list.files[0].id;
 
-    // Create spreadsheet with hidden internal sheets
+    // Create spreadsheet — Google requires at least one visible sheet at creation time,
+    // so _Data starts visible; we hide both internal sheets in a follow-up batchUpdate.
     const created = await fetch(SHEETS_API, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         properties: { title: fileName },
         sheets: [
-          { properties: { title: '_Data',         hidden: true } },
-          { properties: { title: '_Transactions', hidden: true } },
+          { properties: { title: '_Data' } },
+          { properties: { title: '_Transactions' } },
         ],
       }),
     });
     if (!created.ok) throw new Error(`Create spreadsheet ${created.status}: ${await created.text()}`);
     const file = await created.json();
     const fileId: string = file.spreadsheetId;
+
+    // Hide both internal sheets now that the spreadsheet exists with 2 visible sheets
+    const dataSheetId = file.sheets[0].properties.sheetId;
+    const txnSheetId  = file.sheets[1].properties.sheetId;
+    await this.sheetsPost(fileId, token, {
+      requests: [
+        { updateSheetProperties: { properties: { sheetId: dataSheetId, hidden: true }, fields: 'hidden' } },
+        { updateSheetProperties: { properties: { sheetId: txnSheetId,  hidden: true }, fields: 'hidden' } },
+      ],
+    });
 
     // Move into the Savvy folder
     await fetch(
