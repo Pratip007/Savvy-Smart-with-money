@@ -1,0 +1,72 @@
+<app-summary-banner
+  [income]="totalIn()"
+  [expense]="totalOut()"
+  [net]="net()"
+  incomeLabel="Received"
+  expenseLabel="Spent"
+/>
+
+<div class="txn-toolbar">
+  <div class="txn-filters">
+    <button
+      class="txn-filter-btn"
+      [class.active]="filter() === 'all'"
+      (click)="setFilter('all')"
+    >All</button>
+    <button
+      class="txn-filter-btn"
+      [class.active]="filter() === 'expense'"
+      (click)="setFilter('expense')"
+    ><i class="fa-solid fa-arrow-trend-down"></i> Expense</button>
+    <button
+      class="txn-filter-btn"
+      [class.active]="filter() === 'income'"
+      (click)="setFilter('income')"
+    ><i class="fa-solid fa-arrow-trend-up"></i> Income</button>
+  </div>
+  <input
+    class="txn-search"
+    type="search"
+    placeholder="Search category, item, note…"
+    [value]="search()"
+    (input)="setSearch($any($event.target).value)"
+    autocomplete="off"
+  >
+</div>
+
+<div class="txn-list">
+  @if (filtered().length === 0) {
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="fa-solid fa-receipt"></i></div>
+      <div class="empty-state-text">
+        @if (txns().length === 0) {
+          No transactions yet.<br>Tap <strong>+</strong> to log your first one.
+        } @else {
+          No results match your filter.
+        }
+      </div>
+    </div>
+  }
+
+  @for (group of groups(); track group.date) {
+    <div class="txn-date-group">
+      <div class="txn-date-hdr">
+        <span class="txn-date-label">{{ group.label }}</span>
+        <span
+          class="txn-date-net"
+          [class.positive]="group.dayNet >= 0"
+          [class.negative]="group.dayNet < 0"
+        >{{ group.dayNet | fmtCurrency:true }}</span>
+      </div>
+      @for (tx of group.txns; track tx.id) {
+        <app-transaction-item [tx]="tx" (delete)="onDelete(tx.id)" />
+      }
+    </div>
+  }
+</div>
+
+<button class="txn-fab" (click)="openAdd()" title="Add transaction">
+  <i class="fa-solid fa-plus"></i>
+</button>
+
+<app-transaction-modal #txnModal (save)="onTxnSave($event)" />

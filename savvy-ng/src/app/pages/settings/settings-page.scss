@@ -1,0 +1,8 @@
+:host {
+  display: block;
+  padding: 12px;
+  padding-bottom: 80px;
+}
+
+.gmail-section, .notif-section { margin-top: 8px; }
+.gmail-status { display: flex; align-items: center; gap: 8px; color: var(--color-income); font-size: 13px; font-weight: 600; }

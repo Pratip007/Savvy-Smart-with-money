@@ -1,0 +1,21 @@
+export interface MerchantRule { keys: string[]; cat: string; item: string; }
+export const MERCHANT_MAP: MerchantRule[] = [
+  { keys: ['zomato','swiggy','dunzo','box8'],                        cat: 'Food',          item: 'Food Delivery' },
+  { keys: ['bigbasket','grofers','zepto','dmart','blinkit'],         cat: 'Food',          item: 'Groceries' },
+  { keys: ['uber','ola','rapido','meru'],                            cat: 'Transport',     item: 'Taxi / Cab / Auto' },
+  { keys: ['petrol','bpcl','iocl','hp pump','nayara'],               cat: 'Transport',     item: 'Fuel / Gas' },
+  { keys: ['fastag','toll','nhai'],                                  cat: 'Transport',     item: 'Toll & Fastag' },
+  { keys: ['irctc','railway'],                                       cat: 'Travel',        item: 'Train / Bus Tickets' },
+  { keys: ['indigo','air india','vistara','makemytrip'],             cat: 'Travel',        item: 'Flight Tickets' },
+  { keys: ['oyo','treebo','hotel'],                                  cat: 'Travel',        item: 'Hotel / Stay' },
+  { keys: ['netflix','hotstar','disney','prime video'],              cat: 'Entertainment', item: 'Streaming (Netflix/Prime)' },
+  { keys: ['spotify','gaana','jiosaavn','wynk'],                     cat: 'Entertainment', item: 'OTT / Music Apps' },
+  { keys: ['medplus','apollo pharm','netmeds','1mg'],                cat: 'Health',        item: 'Pharmacy' },
+  { keys: ['doctor','hospital','clinic','fortis'],                   cat: 'Health',        item: 'Doctor / Hospital' },
+  { keys: ['gym','cult.fit','crossfit'],                             cat: 'Health',        item: 'Gym' },
+  { keys: ['bescom','msedcl','tata power','adani elec'],             cat: 'Housing',       item: 'Electricity' },
+  { keys: ['airtel','jio','bsnl','vi recharge'],                     cat: 'Technology',    item: 'Mobile Recharge' },
+  { keys: ['amazon','flipkart','myntra','ajio','meesho'],            cat: 'Misc',          item: 'Gifts & Presents' },
+  { keys: ['salary','payroll'],                                      cat: 'Employment',    item: 'Salary' },
+  { keys: ['fd interest','savings interest'],                        cat: 'Investments',   item: 'Interest' },
+];

@@ -1,0 +1,12 @@
+:host {
+  display: block;
+  padding: 12px;
+  padding-bottom: 80px;
+}
+
+.import-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  .btn { flex: 1; font-size: 11px; }
+}

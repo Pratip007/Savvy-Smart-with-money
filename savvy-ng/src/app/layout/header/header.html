@@ -1,0 +1,40 @@
+<header
+  id="app-header"
+  class="h-[60px] flex items-center justify-between px-4 shrink-0 z-[100]"
+  style="background: linear-gradient(145deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%); box-shadow: 0 4px 20px rgba(30,58,138,.4);"
+>
+  <div class="flex items-center gap-[10px]">
+    <i class="fa-solid fa-piggy-bank text-[19px] text-blue-200"></i>
+    <span class="text-[17px] font-bold text-white tracking-[-0.3px]">Savvy</span>
+  </div>
+  <div class="flex items-center gap-1">
+    @if (gsUrl()) {
+      <button
+        class="w-[9px] h-[9px] rounded-full border-0 p-0 shrink-0 mr-[2px]"
+        style="transition: background var(--t-base);"
+        [ngClass]="syncClasses()"
+        (click)="onSyncClick()"
+        title="Sync status"
+      ></button>
+    }
+    <div class="flex items-center">
+      <button
+        class="border-0 text-white w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] shrink-0 active:[transform:scale(.94)]"
+        style="background: rgba(255,255,255,.15); transition: background var(--t-fast);"
+        (click)="state.prevMonth()"
+      >
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <span class="text-white text-[13px] font-semibold min-w-[96px] text-center py-1 px-[2px] tracking-[.1px] cursor-default">
+        {{ monthLabel() }}
+      </span>
+      <button
+        class="border-0 text-white w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] shrink-0 active:[transform:scale(.94)]"
+        style="background: rgba(255,255,255,.15); transition: background var(--t-fast);"
+        (click)="state.nextMonth()"
+      >
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</header>

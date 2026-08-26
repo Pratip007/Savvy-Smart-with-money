@@ -1,0 +1,11 @@
+@use 'styles/variables' as *;
+@use 'styles/tokens';
+@use 'styles/reset';
+@use 'styles/app-shell';
+@use 'styles/budget';
+@use 'styles/transactions';
+@use 'styles/statistics';
+@use 'styles/settings';
+@use 'styles/modals';
+
+@tailwind utilities;

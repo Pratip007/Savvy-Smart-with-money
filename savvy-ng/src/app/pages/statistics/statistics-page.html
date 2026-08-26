@@ -1,0 +1,301 @@
+@if (!hasData()) {
+  <div class="empty-state">
+    <div class="empty-state-icon"><i class="fa-solid fa-chart-pie"></i></div>
+    <div class="empty-state-text">No data yet.<br>Add your budget in the Estimates tab.</div>
+  </div>
+} @else {
+
+  <div class="stats-month-label">{{ monthLabel() }}</div>
+
+  <!-- Monthly circle summary -->
+  @if (monthlyCircleConfig()) {
+    <div class="chart-card monthly-circle-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-circle-dot" style="color:var(--brand-600)"></i>
+        Monthly Summary — {{ monthLabel() }}
+      </div>
+      <div class="monthly-circle-wrap">
+        <app-chart-wrapper [config]="monthlyCircleConfig()" class="chart-wrap chart-h220"></app-chart-wrapper>
+        <div class="circle-center">
+          <div class="circle-net-label">{{ effN() >= 0 ? 'Surplus' : 'Deficit' }}</div>
+          <div class="circle-net-value" [class.positive]="effN() >= 0" [class.negative]="effN() < 0">
+            {{ (effN() >= 0 ? effN() : -effN()) | fmtCurrency }}
+          </div>
+          <div class="circle-sr">{{ effSr() >= 0 ? '+' : '' }}{{ effSr() }}% saved</div>
+        </div>
+      </div>
+      <div class="circle-legend">
+        <div class="cl-item">
+          <span class="cl-dot" style="background:#059669"></span>
+          <span class="cl-label">Income</span>
+          <span class="cl-val" style="color:var(--color-income)">{{ effI() | fmtCurrency }}</span>
+        </div>
+        <div class="cl-item">
+          <span class="cl-dot" style="background:#e11d48"></span>
+          <span class="cl-label">Expenses</span>
+          <span class="cl-val" style="color:var(--color-expense)">{{ effE() | fmtCurrency }}</span>
+        </div>
+        @if (effN() > 0) {
+          <div class="cl-item">
+            <span class="cl-dot" style="background:#93c5fd"></span>
+            <span class="cl-label">Saved</span>
+            <span class="cl-val" style="color:var(--brand-600)">{{ effN() | fmtCurrency }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- 6 KPI stat-cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Est. Income</div>
+      <div class="stat-value income">{{ eI() | fmtCurrency }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Final Income</div>
+      <div class="stat-value income">{{ fI() | fmtCurrency }}</div>
+      @if (deltaText(fI(), eI())) {
+        <div [class]="'stat-delta ' + deltaClass(fI(), eI(), false)">{{ deltaText(fI(), eI()) }}</div>
+      }
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Est. Expenses</div>
+      <div class="stat-value expense">{{ eE() | fmtCurrency }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Final Expenses</div>
+      <div class="stat-value expense">{{ fE() | fmtCurrency }}</div>
+      @if (deltaText(fE(), eE())) {
+        <div [class]="'stat-delta ' + deltaClass(fE(), eE(), true)">{{ deltaText(fE(), eE()) }}</div>
+      }
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Net Balance</div>
+      <div class="stat-value" [class.positive]="fN() >= 0" [class.negative]="fN() < 0">
+        {{ fN() | fmtCurrency:true }}
+      </div>
+      @if (eN() !== 0) {
+        <div class="stat-sub">Est: {{ eN() | fmtCurrency:true }}</div>
+      }
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Savings Rate</div>
+      <div class="stat-value" [class.positive]="sr() >= 0" [class.negative]="sr() < 0">
+        {{ sr() }}%
+      </div>
+      <div class="stat-sub">{{ hasFinal() ? 'Final' : 'Estimated' }}</div>
+    </div>
+  </div>
+
+  <!-- Budget progress bars -->
+  @if (hasEst()) {
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-gauge-high" style="color:var(--brand-600)"></i> Budget Progress
+      </div>
+      <div class="budget-progress">
+        <!-- Income progress -->
+        <div class="bp-row">
+          <div class="bp-label">
+            <span>
+              <i class="fa-solid fa-arrow-trend-up" style="color:var(--color-income);font-size:10px;margin-right:4px"></i>
+              Income
+            </span>
+            <span class="bp-pct">{{ iP() }}%</span>
+          </div>
+          <div class="bp-track">
+            <div class="bp-fill bp-fill-income" [style.width.%]="iP() > 100 ? 100 : iP()"></div>
+          </div>
+          <div class="bp-amounts">
+            {{ fI() | fmtCurrency }} <span class="bp-of">of est.</span> {{ eI() | fmtCurrency }}
+          </div>
+        </div>
+        <!-- Expenses progress -->
+        <div class="bp-row">
+          <div class="bp-label">
+            <span>
+              <i class="fa-solid fa-arrow-trend-down" style="color:var(--color-expense);font-size:10px;margin-right:4px"></i>
+              Expenses
+            </span>
+            <span class="bp-pct" [class.pct-over]="eP() > 100">{{ eP() }}%</span>
+          </div>
+          <div class="bp-track">
+            <div class="bp-fill"
+              [class.bp-fill-over]="eP() > 100"
+              [class.bp-fill-warn]="eP() > 80 && eP() <= 100"
+              [class.bp-fill-expense]="eP() <= 80"
+              [style.width.%]="eP() > 100 ? 100 : eP()"></div>
+          </div>
+          <div class="bp-amounts">
+            {{ fE() | fmtCurrency }} <span class="bp-of">of est.</span> {{ eE() | fmtCurrency }}
+          </div>
+        </div>
+        <!-- Budget used progress -->
+        <div class="bp-row">
+          <div class="bp-label">
+            <span>
+              <i class="fa-solid fa-piggy-bank" style="color:var(--brand-600);font-size:10px;margin-right:4px"></i>
+              Budget Used
+            </span>
+            <span class="bp-pct"
+              [class.pct-over]="bU() > 90"
+              [class.pct-warn]="bU() > 75 && bU() <= 90">{{ bU() }}%</span>
+          </div>
+          <div class="bp-track">
+            <div class="bp-fill"
+              [class.bp-fill-over]="bU() > 90"
+              [class.bp-fill-warn]="bU() > 75 && bU() <= 90"
+              [class.bp-fill-neutral]="bU() <= 75"
+              [style.width.%]="bU() > 100 ? 100 : bU()"></div>
+          </div>
+          <div class="bp-amounts">
+            {{ effE() | fmtCurrency }} <span class="bp-of">of</span> {{ effI() | fmtCurrency }}
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Income vs Expenses overview bar chart -->
+  @if (hasFinal() || hasEst()) {
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-chart-bar" style="color:var(--brand-600)"></i> Income vs Expenses Overview
+      </div>
+      <app-chart-wrapper [config]="overviewConfig()" class="chart-wrap chart-h220"></app-chart-wrapper>
+    </div>
+  }
+
+  <!-- Top 5 expense categories -->
+  @if (topExpenses().length) {
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-fire-flame-curved" style="color:#f59e0b"></i>
+        Top Expense Categories
+        <span class="chart-src-tag">{{ hasFinal() ? 'Final' : 'Estimate' }}</span>
+      </div>
+      <div class="top-exp-list">
+        @for (exp of topExpenses(); track exp.n; let i = $index) {
+          <div class="texp-row">
+            <div class="texp-rank"
+              [style.background]="CCOLORS[i] + '20'"
+              [style.border-color]="CCOLORS[i] + '55'"
+              [style.color]="CCOLORS[i]">{{ i + 1 }}</div>
+            <div class="texp-body">
+              <div class="texp-top">
+                <span class="texp-name">{{ exp.n }}</span>
+                <span class="texp-val">{{ exp.v | fmtCurrency }}</span>
+              </div>
+              <div class="texp-track">
+                <div class="texp-fill"
+                  [style.width.%]="exp.v / totTopExp() * 100"
+                  [style.background]="CCOLORS[i]"></div>
+              </div>
+              <div class="texp-pct">{{ (exp.v / totTopExp() * 100).toFixed(0) }}% of total expenses</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Expense breakdown pie -->
+  @if (hasExpData()) {
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-chart-pie" style="color:var(--color-expense)"></i>
+        Expense Breakdown
+        <span class="chart-src-tag">{{ hasFinal() ? 'Final' : 'Estimate' }}</span>
+      </div>
+      <app-chart-wrapper [config]="expPieConfig()" class="chart-wrap chart-h220"></app-chart-wrapper>
+    </div>
+  }
+
+  <!-- Monthly trend bar chart (last 8 months) -->
+  @if (allKeys().length > 1) {
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-chart-column" style="color:var(--brand-600)"></i> Monthly Overview (last 8 months)
+      </div>
+      <app-chart-wrapper [config]="trendConfig()" class="chart-wrap chart-h220"></app-chart-wrapper>
+    </div>
+
+    <!-- Net balance trend line -->
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-chart-line" style="color:var(--brand-600)"></i> Net Balance Trend
+      </div>
+      <app-chart-wrapper [config]="netTrendConfig()" class="chart-wrap chart-h180"></app-chart-wrapper>
+    </div>
+  }
+
+  <!-- Monthly insights (4-card grid) -->
+  @if (insights()) {
+    <div class="stats-insights">
+      <div class="insight-card">
+        <div class="insight-label">Avg Monthly Income</div>
+        <div class="insight-value" style="color:var(--color-income)">{{ insights()!.avgI | fmtCurrency }}</div>
+        <div class="insight-sub">over {{ insights()!.count }} months</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-label">Avg Monthly Spend</div>
+        <div class="insight-value" style="color:var(--color-expense)">{{ insights()!.avgE | fmtCurrency }}</div>
+        <div class="insight-sub">per month avg</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-label">Best Savings Month</div>
+        <div class="insight-value"
+          [class.positive]="insights()!.bestNet >= 0"
+          [class.negative]="insights()!.bestNet < 0">
+          {{ insights()!.bestNet | fmtCurrency:true }}
+        </div>
+        <div class="insight-sub">{{ insights()!.bestLabel }}</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-label">Months Tracked</div>
+        <div class="insight-value" style="color:var(--brand-600)">{{ insights()!.count }}</div>
+        <div class="insight-sub">
+          {{ insights()!.worstNet < 0 ? 'Deficit: ' + insights()!.worstLabel : 'all positive' }}
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- All months history table -->
+  @if (allKeys().length) {
+    <div class="history-card">
+      <div class="history-title">
+        <i class="fa-solid fa-calendar-days" style="color:var(--brand-600)"></i> All Months
+      </div>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Income</th>
+            <th>Expenses</th>
+            <th>Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of allMonthsRows(); track row!.key) {
+            <tr [class.current-month]="row!.isCurrent" (click)="navigateToMonth(row!.key)">
+              <td>{{ row!.label }}</td>
+              <td class="td-income">{{ row!.inc | fmtCurrency }}</td>
+              <td class="td-expense">{{ row!.exp | fmtCurrency }}</td>
+              <td [class.td-positive]="row!.net >= 0" [class.td-negative]="row!.net < 0">
+                {{ row!.net | fmtCurrency:true }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Download template -->
+  <button class="btn btn-secondary btn-full" (click)="dlTemplate()">
+    <i class="fa-solid fa-table"></i> Download Import Template
+  </button>
+
+}

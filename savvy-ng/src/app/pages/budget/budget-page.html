@@ -1,0 +1,151 @@
+<app-summary-banner
+  [income]="income()"
+  [expense]="expenses()"
+  [net]="net()" />
+
+@if (mode() === 'estimates') {
+  <div class="action-row">
+    <button class="btn btn-secondary" (click)="exportCSV()">
+      <i class="fa-solid fa-file-arrow-down"></i> Export CSV
+    </button>
+    <button class="btn btn-secondary" (click)="print()">
+      <i class="fa-solid fa-print"></i> Print
+    </button>
+  </div>
+}
+
+@if (mode() === 'final') {
+  @if (hasTxns()) {
+    <div class="txn-banner">
+      <i class="fa-solid fa-receipt txn-banner-icon"></i>
+      <span class="txn-banner-text">
+        Amounts auto-computed from
+        <strong>{{ txns().length }}</strong>
+        transaction{{ txns().length !== 1 ? 's' : '' }}
+      </span>
+      <button class="txn-banner-link" (click)="goToTransactions()">Manage &rarr;</button>
+    </div>
+  }
+
+  <div class="import-card"
+       (dragover)="$event.preventDefault()"
+       (drop)="onFileDrop($event)">
+    <div class="import-card-title">
+      <i class="fa-solid fa-file-arrow-up"></i> Import Actual Data
+    </div>
+    <div class="import-zone" (click)="onFileBrowse(fileInput)">
+      <div class="import-zone-icon"><i class="fa-solid fa-folder-open"></i></div>
+      <div class="import-zone-text">Tap to upload or drag &amp; drop</div>
+      <div class="import-zone-sub">CSV or Excel (.xlsx / .xls)</div>
+    </div>
+    <div class="import-card-actions">
+      <button class="btn btn-secondary" (click)="dlTemplate()">
+        <i class="fa-solid fa-table"></i> Template
+      </button>
+      <button class="btn btn-secondary" (click)="exportCSV()">
+        <i class="fa-solid fa-file-arrow-down"></i> Export
+      </button>
+      <button class="btn btn-secondary" (click)="copyFromEst()">
+        <i class="fa-solid fa-rotate"></i> Copy Est.
+      </button>
+    </div>
+  </div>
+}
+
+<!-- Income section -->
+<div class="section-header">
+  <div class="section-title">
+    <i class="fa-solid fa-arrow-trend-up" style="color:var(--color-income)"></i> Income
+  </div>
+  <span class="section-badge badge-income">{{ income() | fmtCurrency }}</span>
+</div>
+
+@for (entry of incomeEntries(); track entry[0]; let i = $index) {
+  <app-category-card
+    [catName]="entry[0]"
+    [catData]="entry[1]"
+    [colorIndex]="i"
+    [mode]="mode()"
+    [type]="'income'"
+    [txCatMap]="txItemMap('income', entry[0])"
+    [estCatData]="getEstCatData('income', entry[0])"
+    (toggleCollapse)="onToggleCollapse('income', entry[0])"
+    (deleteCategory)="onDeleteCat('income', entry[0])"
+    (addItem)="onAddItem('income', entry[0])"
+    (deleteItem)="onDeleteItem('income', entry[0], $event)"
+    (nameChange)="onNameChange('income', entry[0], $event.id, $event.name)"
+    (nameSave)="onNameSave('income', entry[0], $event.id, $event.name)"
+    (amountChange)="onAmountChange('income', entry[0], $event.id, $event.amount)" />
+}
+
+<button class="btn-add-category" (click)="openAddCat('income')">
+  <i class="fa-solid fa-plus"></i> Add Income Category
+</button>
+
+<!-- Expenses section -->
+<div class="section-header" style="margin-top:6px">
+  <div class="section-title">
+    <i class="fa-solid fa-arrow-trend-down" style="color:var(--color-expense)"></i> Expenses
+  </div>
+  <span class="section-badge badge-expense">{{ expenses() | fmtCurrency }}</span>
+</div>
+
+@for (entry of expenseEntries(); track entry[0]; let i = $index) {
+  <app-category-card
+    [catName]="entry[0]"
+    [catData]="entry[1]"
+    [colorIndex]="i"
+    [mode]="mode()"
+    [type]="'expenses'"
+    [txCatMap]="txItemMap('expenses', entry[0])"
+    [estCatData]="getEstCatData('expenses', entry[0])"
+    (toggleCollapse)="onToggleCollapse('expenses', entry[0])"
+    (deleteCategory)="onDeleteCat('expenses', entry[0])"
+    (addItem)="onAddItem('expenses', entry[0])"
+    (deleteItem)="onDeleteItem('expenses', entry[0], $event)"
+    (nameChange)="onNameChange('expenses', entry[0], $event.id, $event.name)"
+    (nameSave)="onNameSave('expenses', entry[0], $event.id, $event.name)"
+    (amountChange)="onAmountChange('expenses', entry[0], $event.id, $event.amount)" />
+}
+
+<button class="btn-add-category" (click)="openAddCat('expenses')">
+  <i class="fa-solid fa-plus"></i> Add Expense Category
+</button>
+
+<!-- Final vs Estimates comparison card -->
+@if (showCompare()) {
+  <div class="comparison-card">
+    <div class="comparison-title">
+      <i class="fa-solid fa-chart-simple" style="color:var(--brand-600)"></i> Final vs Estimates
+    </div>
+    <div class="comparison-row">
+      <div class="comparison-label">
+        <span>Income</span>
+        <span>{{ income() | fmtCurrency }} / {{ estIncome() | fmtCurrency }}</span>
+      </div>
+      <div class="comparison-track">
+        <div class="comparison-fill"
+             [style.width.%]="incomeP()"
+             style="background:#059669"></div>
+      </div>
+    </div>
+    <div class="comparison-row">
+      <div class="comparison-label">
+        <span>Expenses</span>
+        <span>{{ expenses() | fmtCurrency }} / {{ estExpenses() | fmtCurrency }}</span>
+      </div>
+      <div class="comparison-track">
+        <div class="comparison-fill"
+             [style.width.%]="expenseP()"
+             [style.background]="expenses() > estExpenses() ? '#e11d48' : '#059669'"></div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Category modal -->
+<app-category-modal #catModal (confirmed)="onCatConfirmed($event)" />
+
+<!-- Hidden file input for import -->
+<input type="file" #fileInput (change)="onFileChange($event)"
+       style="display:none" accept=".csv,.xlsx,.xls">
