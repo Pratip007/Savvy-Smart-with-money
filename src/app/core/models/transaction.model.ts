@@ -3,6 +3,7 @@ export type TransactionType = 'income' | 'expense';
 export interface Transaction {
   id: string;
   date: string;
+  time?: string;       // "HH:MM" 24-hour
   type: TransactionType;
   category: string;
   item: string;

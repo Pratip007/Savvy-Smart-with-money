@@ -14,7 +14,7 @@ import { FmtCurrencyPipe } from '../../pipes/fmt-currency.pipe';
       <div class="txn-body">
         <div class="txn-name">{{ tx().item }}</div>
         <div class="txn-meta">
-          {{ tx().category }}{{ tx().note ? ' · ' + tx().note : '' }}
+          {{ tx().category }}{{ tx().time ? ' · ' + tx().time : '' }}{{ tx().note ? ' · ' + tx().note : '' }}
           @if (tx().source === 'bank') {
             <span class="txn-src-badge"><i class="fa-solid fa-building-columns"></i> Bank</span>
           }

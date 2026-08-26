@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Transaction } from '../../../core/models/transaction.model';
 import { DEF_INCOME, DEF_EXPENSES } from '../../../core/constants/budget-defaults.const';
 import { CategorizeService } from '../../../core/services/categorize.service';
+import { BudgetStateService } from '../../../core/services/budget-state.service';
 
 const CAT_ICONS: Record<string, string> = {
   'Housing': '🏠', 'Food': '🍔', 'Transport': '🚗', 'Health': '💊',
@@ -13,6 +14,10 @@ const CAT_ICONS: Record<string, string> = {
   'Employment': '💼', 'Business': '🏢', 'Investments': '📈',
   'Freelance': '🖥️', 'Rental': '🏘️', 'Other': '💵',
 };
+
+function nowTime(): string { return new Date().toTimeString().slice(0, 5); }
+function todayDate(): string { return new Date().toISOString().slice(0, 10); }
+function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10); }
 
 @Component({
   selector: 'app-transaction-modal',
@@ -43,20 +48,24 @@ const CAT_ICONS: Record<string, string> = {
                  placeholder="0" min="0" step="0.01" inputmode="decimal">
         </div>
 
-        <!-- Date + Note in one row -->
+        <!-- Date · Time · Note row -->
         <div class="at-meta-row">
           <div class="at-date-wrap">
             <i class="fa-solid fa-calendar-days"></i>
             <span>{{ dateLabel() }}</span>
             <input class="at-date-overlay" type="date" [(ngModel)]="date">
           </div>
+          <div class="at-time-wrap">
+            <i class="fa-solid fa-clock"></i>
+            <input class="at-time-input" type="time" [(ngModel)]="time">
+          </div>
           <div class="at-note-wrap" [class.detected]="autoDetected()">
             <i class="fa-solid fa-pen-to-square"></i>
             <input class="at-note-input" type="text" [(ngModel)]="note"
-                   placeholder="Note (optional)" maxlength="80" autocomplete="off"
+                   placeholder="Note…" maxlength="80" autocomplete="off"
                    (input)="onNoteInput($event)">
             @if (autoDetected()) {
-              <i class="fa-solid fa-wand-magic-sparkles at-auto-icon"></i>
+              <i class="fa-solid fa-wand-magic-sparkles at-auto-icon" title="Auto-detected"></i>
             }
           </div>
         </div>
@@ -65,61 +74,119 @@ const CAT_ICONS: Record<string, string> = {
         <p class="at-label">Category</p>
         <div class="at-cat-grid">
           @for (d of currentDefs(); track d.name) {
-            <button class="at-cat-tile" [class.active]="category===d.name" (click)="setCategory(d.name)">
+            <button class="at-cat-tile" [class.active]="category===d.name"
+                    (click)="setCategory(d.name)">
               <span class="at-cat-emoji">{{ catIcon(d.name) }}</span>
               <span class="at-cat-name">{{ d.name }}</span>
+              @if (category===d.name) {
+                <span class="at-cat-check"><i class="fa-solid fa-check"></i></span>
+              }
+            </button>
+          }
+          <!-- Add new category tile -->
+          @if (!showAddCat()) {
+            <button class="at-cat-tile at-cat-add-tile" (click)="showAddCat.set(true)">
+              <span class="at-cat-emoji">➕</span>
+              <span class="at-cat-name">New</span>
             </button>
           }
         </div>
 
-        <!-- Item dropdown -->
-        <p class="at-label">Item</p>
-        <select class="at-select" [(ngModel)]="item">
-          @for (i of currentItems(); track i) {
-            <option [value]="i">{{ i }}</option>
-          }
-        </select>
+        <!-- Inline add-category input -->
+        @if (showAddCat()) {
+          <div class="at-add-cat-row">
+            <input class="at-add-cat-input" type="text" [(ngModel)]="newCatName"
+                   placeholder="Category name…" maxlength="40"
+                   (keyup.enter)="confirmAddCat()">
+            <button class="at-add-cat-ok" (click)="confirmAddCat()">
+              <i class="fa-solid fa-check"></i>
+            </button>
+            <button class="at-add-cat-cancel" (click)="showAddCat.set(false); newCatName=''">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        }
 
-        <!-- Save -->
-        <button class="at-save-btn" (click)="save.emit(buildTx())">
+        <!-- Item chips (wrap) -->
+        <p class="at-label">Item</p>
+        <div class="at-item-chips">
+          @for (i of currentItems(); track i) {
+            <button class="at-item-chip" [class.active]="item===i" (click)="item=i">
+              {{ i }}
+            </button>
+          }
+        </div>
+
+        <!-- Primary save button -->
+        <button class="at-save-btn" (click)="saveAndClose()">
           <i class="fa-solid fa-check"></i>
           {{ editId() ? 'Update' : 'Save' }} Transaction
         </button>
-        <button class="at-cancel-btn" (click)="cancel()">Cancel</button>
+
+        <!-- 3-button action row -->
+        <div class="at-action-row">
+          <button class="at-action-btn at-action-cancel" (click)="cancel()">
+            Cancel
+          </button>
+          <button class="at-action-btn at-action-continue" (click)="saveAndContinue()">
+            <i class="fa-solid fa-plus"></i> Continue
+          </button>
+          <button class="at-action-btn at-action-otherday" (click)="saveAndOtherDay()">
+            <i class="fa-solid fa-calendar-days"></i> Other Day
+          </button>
+        </div>
       </div>
     </div>
   `
 })
 export class TransactionModalComponent {
-  private categorize = inject(CategorizeService);
+  private categorize  = inject(CategorizeService);
+  private budgetState = inject(BudgetStateService);
 
   readonly visible      = signal(false);
   readonly editId       = signal<string | null>(null);
   readonly txType       = signal<'income' | 'expense'>('expense');
   readonly autoDetected = signal(false);
+  readonly showAddCat   = signal(false);
 
-  date     = new Date().toISOString().slice(0, 10);
-  amount   = '';
-  category = '';
-  item     = '';
-  note     = '';
+  date       = todayDate();
+  time       = nowTime();
+  amount     = '';
+  category   = '';
+  item       = '';
+  note       = '';
+  newCatName = '';
 
   save      = output<Partial<Transaction> & { editId: string | null }>();
   cancelled = output<void>();
 
-  currentDefs  = computed(() => this.txType() === 'income' ? DEF_INCOME : DEF_EXPENSES);
+  // Categories synced from budget estimation state; falls back to DEF if empty
+  currentDefs = computed(() => {
+    const type    = this.txType();
+    const section = type === 'income'
+      ? this.budgetState.currentMonthData().estimates.income
+      : this.budgetState.currentMonthData().estimates.expenses;
+    const entries = Object.entries(section);
+    if (entries.length > 0) {
+      return entries.map(([name, data]) => ({
+        name,
+        items: data.items.length ? data.items.map(i => i.name) : ['Other'],
+      }));
+    }
+    return type === 'income' ? DEF_INCOME : DEF_EXPENSES;
+  });
+
   currentItems = computed(() => {
     const def = this.currentDefs().find(d => d.name === this.category);
-    return def ? def.items : ['Other'];
+    const list = def?.items ?? [];
+    return list.length ? list : ['Other'];
   });
 
   catIcon(name: string): string { return CAT_ICONS[name] ?? '📂'; }
 
   dateLabel(): string {
-    const today     = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-    if (this.date === today)     return 'Today';
-    if (this.date === yesterday) return 'Yesterday';
+    if (this.date === todayDate())     return 'Today';
+    if (this.date === yesterdayDate()) return 'Yesterday';
     const [y, m, d] = this.date.split('-');
     return `${d}/${m}/${y.slice(2)}`;
   }
@@ -127,32 +194,78 @@ export class TransactionModalComponent {
   open(tx?: Transaction): void {
     this.editId.set(tx?.id ?? null);
     this.txType.set(tx?.type ?? 'expense');
-    this.date   = tx?.date ?? new Date().toISOString().slice(0, 10);
+    this.date   = tx?.date ?? todayDate();
+    this.time   = tx?.time ?? nowTime();
     this.amount = tx?.amount ? String(tx.amount) : '';
     this.note   = tx?.note ?? '';
     this.autoDetected.set(false);
-    const defs    = tx?.type === 'income' ? DEF_INCOME : DEF_EXPENSES;
-    this.category = tx?.category ?? defs[0].name;
-    this.item     = tx?.item     ?? defs[0].items[0];
+    this.showAddCat.set(false);
+    this.newCatName = '';
+    const defs    = this.currentDefs();
+    this.category = tx?.category ?? defs[0]?.name ?? '';
+    this.item     = tx?.item     ?? (this.currentItems()[0] ?? 'Other');
     this.visible.set(true);
   }
 
   cancel(): void { this.visible.set(false); this.cancelled.emit(); }
 
+  saveAndClose(): void {
+    this.save.emit(this.buildTx());
+    this.visible.set(false);
+  }
+
+  saveAndContinue(): void {
+    this.save.emit(this.buildTx());
+    const savedDate = this.date;
+    const savedType = this.txType();
+    this.amount = '';
+    this.note   = '';
+    this.time   = nowTime();
+    this.autoDetected.set(false);
+    this.date = savedDate;
+    this.txType.set(savedType);
+    const defs    = this.currentDefs();
+    this.category = defs[0]?.name ?? '';
+    this.item     = defs[0]?.items[0] ?? 'Other';
+  }
+
+  saveAndOtherDay(): void {
+    this.save.emit(this.buildTx());
+    const savedType = this.txType();
+    this.amount = '';
+    this.note   = '';
+    this.time   = nowTime();
+    this.autoDetected.set(false);
+    this.date = yesterdayDate();
+    this.txType.set(savedType);
+    const defs    = this.currentDefs();
+    this.category = defs[0]?.name ?? '';
+    this.item     = defs[0]?.items[0] ?? 'Other';
+  }
+
   setType(t: 'income' | 'expense'): void {
     this.txType.set(t);
-    const defs    = t === 'income' ? DEF_INCOME : DEF_EXPENSES;
-    this.category = defs[0].name;
-    this.item     = defs[0].items[0];
+    const defs    = this.currentDefs();
+    this.category = defs[0]?.name ?? '';
+    this.item     = defs[0]?.items[0] ?? 'Other';
   }
 
   setCategory(name: string): void {
     this.category = name;
     const def = this.currentDefs().find(d => d.name === name);
-    this.item = def ? def.items[0] : 'Other';
+    this.item = def?.items[0] ?? 'Other';
   }
 
-  onCatChange(): void { this.item = this.currentItems()[0] ?? 'Other'; }
+  confirmAddCat(): void {
+    const name = this.newCatName.trim();
+    if (!name) return;
+    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
+    this.budgetState.addCategory(secKey, 'estimates', name);
+    this.category   = name;
+    this.item       = 'Other';
+    this.newCatName = '';
+    this.showAddCat.set(false);
+  }
 
   onNoteInput(e: Event): void {
     if (this.editId()) return;
@@ -172,6 +285,7 @@ export class TransactionModalComponent {
     return {
       editId:   this.editId(),
       date:     this.date,
+      time:     this.time,
       type:     this.txType(),
       category: this.category,
       item:     this.item,

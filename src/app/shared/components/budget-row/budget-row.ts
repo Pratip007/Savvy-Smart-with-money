@@ -25,7 +25,7 @@ import { FmtCurrencyPipe } from '../../pipes/fmt-currency.pipe';
         </div>
       } @else {
         <input class="item-amount-input" type="number"
-          [value]="item().amount || ''"
+          [value]="(+item().amount) || ''"
           placeholder="0" min="0" step="0.01" inputmode="decimal"
           (input)="amountChange.emit(parseFloat($any($event.target).value) || 0)">
       }
