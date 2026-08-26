@@ -15,7 +15,7 @@ const CAT_ICONS: Record<string, string> = {
   'Freelance': '🖥️', 'Rental': '🏘️', 'Other': '💵',
 };
 
-function nowTime(): string { return new Date().toTimeString().slice(0, 5); }
+function nowTime(): string  { return new Date().toTimeString().slice(0, 5); }
 function todayDate(): string { return new Date().toISOString().slice(0, 10); }
 function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10); }
 
@@ -65,11 +65,11 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
         <p class="at-label">Category</p>
         <div class="at-cat-grid">
           @for (d of currentDefs(); track d.name) {
-            <button class="at-cat-tile" [class.active]="category===d.name"
+            <button class="at-cat-tile" [class.active]="category()===d.name"
                     (click)="setCategory(d.name)">
               <span class="at-cat-emoji">{{ catIcon(d.name) }}</span>
               <span class="at-cat-name">{{ d.name }}</span>
-              @if (category===d.name) {
+              @if (category()===d.name) {
                 <span class="at-cat-check"><i class="fa-solid fa-check"></i></span>
               }
             </button>
@@ -98,11 +98,12 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           </div>
         }
 
-        <!-- Item chips (wrap) -->
+        <!-- Item chips — reactive to category() -->
         <p class="at-label">Item</p>
         <div class="at-item-chips">
           @for (i of currentItems(); track i) {
-            <button class="at-item-chip" [class.active]="item===i" (click)="item=i">
+            <button class="at-item-chip" [class.active]="item()===i"
+                    (click)="item.set(i)">
               {{ i }}
             </button>
           }
@@ -152,11 +153,13 @@ export class TransactionModalComponent {
   readonly autoDetected = signal(false);
   readonly showAddCat   = signal(false);
 
+  // category & item are signals so computed(currentItems) reacts to changes
+  readonly category = signal('');
+  readonly item     = signal('');
+
   date       = todayDate();
   time       = nowTime();
   amount     = '';
-  category   = '';
-  item       = '';
   note       = '';
   newCatName = '';
 
@@ -179,8 +182,9 @@ export class TransactionModalComponent {
     return type === 'income' ? DEF_INCOME : DEF_EXPENSES;
   });
 
+  // Reacts to category() signal — updates instantly when category changes
   currentItems = computed(() => {
-    const def = this.currentDefs().find(d => d.name === this.category);
+    const def  = this.currentDefs().find(d => d.name === this.category());
     const list = def?.items ?? [];
     return list.length ? list : ['Other'];
   });
@@ -204,9 +208,9 @@ export class TransactionModalComponent {
     this.autoDetected.set(false);
     this.showAddCat.set(false);
     this.newCatName = '';
-    const defs    = this.currentDefs();
-    this.category = tx?.category ?? defs[0]?.name ?? '';
-    this.item     = tx?.item     ?? (this.currentItems()[0] ?? 'Other');
+    const defs = this.currentDefs();
+    this.category.set(tx?.category ?? defs[0]?.name ?? '');
+    this.item.set(tx?.item ?? (this.currentItems()[0] ?? 'Other'));
     this.visible.set(true);
   }
 
@@ -220,43 +224,40 @@ export class TransactionModalComponent {
   saveAndContinue(): void {
     this.save.emit(this.buildTx());
     const savedDate = this.date;
-    const savedType = this.txType();
     this.amount = '';
     this.note   = '';
     this.time   = nowTime();
     this.autoDetected.set(false);
     this.date = savedDate;
-    this.txType.set(savedType);
-    const defs    = this.currentDefs();
-    this.category = defs[0]?.name ?? '';
-    this.item     = defs[0]?.items[0] ?? 'Other';
+    const defs = this.currentDefs();
+    this.category.set(defs[0]?.name ?? '');
+    this.item.set(defs[0]?.items[0] ?? 'Other');
   }
 
   saveAndOtherDay(): void {
     this.save.emit(this.buildTx());
-    const savedType = this.txType();
     this.amount = '';
     this.note   = '';
     this.time   = nowTime();
     this.autoDetected.set(false);
     this.date = yesterdayDate();
-    this.txType.set(savedType);
-    const defs    = this.currentDefs();
-    this.category = defs[0]?.name ?? '';
-    this.item     = defs[0]?.items[0] ?? 'Other';
+    const defs = this.currentDefs();
+    this.category.set(defs[0]?.name ?? '');
+    this.item.set(defs[0]?.items[0] ?? 'Other');
   }
 
   setType(t: 'income' | 'expense'): void {
     this.txType.set(t);
-    const defs    = this.currentDefs();
-    this.category = defs[0]?.name ?? '';
-    this.item     = defs[0]?.items[0] ?? 'Other';
+    const defs = this.currentDefs();
+    this.category.set(defs[0]?.name ?? '');
+    this.item.set(defs[0]?.items[0] ?? 'Other');
   }
 
   setCategory(name: string): void {
-    this.category = name;
+    this.category.set(name);
+    // currentItems recomputes automatically; pick first item of new category
     const def = this.currentDefs().find(d => d.name === name);
-    this.item = def?.items[0] ?? 'Other';
+    this.item.set(def?.items[0] ?? 'Other');
   }
 
   confirmAddCat(): void {
@@ -264,8 +265,8 @@ export class TransactionModalComponent {
     if (!name) return;
     const secKey = this.txType() === 'income' ? 'income' : 'expenses';
     this.budgetState.addCategory(secKey, 'estimates', name);
-    this.category   = name;
-    this.item       = 'Other';
+    this.category.set(name);
+    this.item.set('Other');
     this.newCatName = '';
     this.showAddCat.set(false);
   }
@@ -276,8 +277,8 @@ export class TransactionModalComponent {
     const guess = this.categorize.categorize(val);
     const match = this.currentDefs().find(d => d.name === guess.cat);
     if (match) {
-      this.category = guess.cat;
-      if (match.items.includes(guess.item)) this.item = guess.item;
+      this.category.set(guess.cat);
+      if (match.items.includes(guess.item)) this.item.set(guess.item);
       this.autoDetected.set(true);
     } else {
       this.autoDetected.set(false);
@@ -290,8 +291,8 @@ export class TransactionModalComponent {
       date:     this.date,
       time:     this.time,
       type:     this.txType(),
-      category: this.category,
-      item:     this.item,
+      category: this.category(),
+      item:     this.item(),
       amount:   parseFloat(this.amount) || 0,
       note:     this.note.trim(),
       source:   'manual',
