@@ -73,7 +73,9 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
 
         <!-- Category grid -->
         <p class="at-label">Category</p>
-        <div class="at-cat-grid">
+        <div class="at-cat-grid"
+             [class.at-cat-grid--fill]="!catScrollMode()"
+             [class.at-cat-grid--scroll]="catScrollMode()">
           @for (d of currentDefs(); track d.name) {
             <button class="at-cat-tile" [class.active]="category()===d.name"
                     (click)="setCategory(d.name)">
@@ -114,7 +116,8 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
 
         <!-- Item chips — reactive to category() -->
         <p class="at-label">Item</p>
-        <div class="at-item-chips">
+        <div class="at-item-chips"
+             [class.at-item-chips--scroll]="itemScrollMode()">
           @for (i of currentItems(); track i) {
             <button class="at-item-chip" [class.active]="item()===i"
                     (click)="item.set(i)">
@@ -228,6 +231,11 @@ export class TransactionModalComponent {
     const list = def?.items ?? [];
     return list.length ? list : ['Other'];
   });
+
+  // Grid mode: fill (≤12 cats) → equal columns span full width; scroll (>12) → column-flow
+  catScrollMode  = computed(() => this.currentDefs().length + 1 > 12);
+  // Item mode: scroll when >9 chips (3 rows × 3 chips)
+  itemScrollMode = computed(() => this.currentItems().length + 1 > 9);
 
   catIcon(name: string): string { return CAT_ICONS[name] ?? '📂'; }
 
