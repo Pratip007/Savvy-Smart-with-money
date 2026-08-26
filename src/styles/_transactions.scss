@@ -904,6 +904,53 @@
 }
 .at-cat-add-tile .at-cat-name { color: var(--brand-600); }
 
+/* ── Emoji picker ── */
+.at-emoji-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1.5px solid var(--brand-300, var(--brand-400));
+  background: var(--surface);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.at-emoji-btn:hover { background: var(--brand-50, #eff6ff); }
+
+.at-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--brand-300, var(--brand-400));
+  border-radius: var(--r-md);
+  margin: -4px 0 8px;
+}
+
+.at-emoji-opt {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 7px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.at-emoji-opt:hover { background: var(--surface-alt); }
+.at-emoji-opt.selected {
+  border-color: var(--brand-500);
+  background: var(--brand-50, #eff6ff);
+}
+
 /* ── Add category inline input ── */
 .at-add-cat-row {
   display: flex;

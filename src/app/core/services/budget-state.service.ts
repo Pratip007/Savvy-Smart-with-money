@@ -124,12 +124,12 @@ export class BudgetStateService {
     });
   }
 
-  addCategory(type: string, mode: string, name: string): void {
+  addCategory(type: string, mode: string, name: string, emoji?: string): void {
     this.data.update(data => {
       const d = JSON.parse(JSON.stringify(data)) as AllData;
       const k = this.currentKey();
       if (!d[k]) d[k] = this.makeMonth();
-      (d[k] as any)[mode][type][name] = { collapsed: false, items: [] };
+      (d[k] as any)[mode][type][name] = { collapsed: false, items: [], ...(emoji ? { emoji } : {}) };
       return d;
     });
   }

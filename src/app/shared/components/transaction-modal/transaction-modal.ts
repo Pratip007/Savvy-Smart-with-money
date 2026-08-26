@@ -15,6 +15,13 @@ const CAT_ICONS: Record<string, string> = {
   'Freelance': '🖥️', 'Rental': '🏘️', 'Other': '💵',
 };
 
+const EMOJI_OPTIONS = [
+  '🛒','🍕','☕','🍜','🍱','🥗','🎮','🎵','🎸','🏋️','🚴',
+  '🏖️','🌿','🐾','💡','🎁','🧴','🛋️','🚌','🎓','🏥',
+  '🧾','💈','🪴','🎪','🏗️','🔧','🎨','📱','🖨️','💍',
+  '🏦','🧳','⛽','🪒','🛁','🍺','🍷','🎭','🏟️','📷',
+];
+
 function nowTime(): string  { return new Date().toTimeString().slice(0, 5); }
 function todayDate(): string { return new Date().toISOString().slice(0, 10); }
 function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10); }
@@ -70,7 +77,7 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           @for (d of currentDefs(); track d.name) {
             <button class="at-cat-tile" [class.active]="category()===d.name"
                     (click)="setCategory(d.name)">
-              <span class="at-cat-emoji">{{ catIcon(d.name) }}</span>
+              <span class="at-cat-emoji">{{ d.emoji ?? catIcon(d.name) }}</span>
               <span class="at-cat-name">{{ d.name }}</span>
               @if (category()===d.name) {
                 <span class="at-cat-check"><i class="fa-solid fa-check"></i></span>
@@ -89,16 +96,29 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
         <!-- Inline add-category input -->
         @if (showAddCat()) {
           <div class="at-add-cat-row">
+            <button class="at-emoji-btn" (click)="showEmojiPick.set(!showEmojiPick())">
+              {{ newCatEmoji() }}
+            </button>
             <input class="at-add-cat-input" type="text" [(ngModel)]="newCatName"
                    placeholder="Category name…" maxlength="40"
                    (keyup.enter)="confirmAddCat()">
             <button class="at-add-cat-ok" (click)="confirmAddCat()">
               <i class="fa-solid fa-check"></i>
             </button>
-            <button class="at-add-cat-cancel" (click)="showAddCat.set(false); newCatName=''">
+            <button class="at-add-cat-cancel" (click)="showAddCat.set(false); showEmojiPick.set(false); newCatName=''">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
+          @if (showEmojiPick()) {
+            <div class="at-emoji-grid">
+              @for (e of emojiOptions; track e) {
+                <button class="at-emoji-opt" [class.selected]="newCatEmoji()===e"
+                        (click)="newCatEmoji.set(e); showEmojiPick.set(false)">
+                  {{ e }}
+                </button>
+              }
+            </div>
+          }
         }
 
         <!-- Item chips — reactive to category() -->
@@ -169,8 +189,11 @@ export class TransactionModalComponent {
   readonly editId       = signal<string | null>(null);
   readonly txType       = signal<'income' | 'expense'>('expense');
   readonly autoDetected = signal(false);
-  readonly showAddCat  = signal(false);
-  readonly showAddItem = signal(false);
+  readonly showAddCat     = signal(false);
+  readonly showAddItem    = signal(false);
+  readonly showEmojiPick  = signal(false);
+  readonly newCatEmoji    = signal('📂');
+  readonly emojiOptions   = EMOJI_OPTIONS;
 
   // category & item are signals so computed(currentItems) reacts to changes
   readonly category = signal('');
@@ -195,15 +218,17 @@ export class TransactionModalComponent {
     const defaults = type === 'income' ? DEF_INCOME : DEF_EXPENSES;
     const saved    = Object.entries(section).map(([name, data]) => ({
       name,
-      // If saved category has no items, fall back to DEF items for that category
+      emoji: data.emoji,
       items: data.items.length
         ? data.items.map(i => i.name)
         : (defaults.find(d => d.name === name)?.items ?? ['Other']),
     }));
-    if (saved.length === 0) return defaults;
-    // Merge: show saved categories + any DEF categories not yet saved
+    if (saved.length === 0) return defaults.map(d => ({ ...d, emoji: undefined as string | undefined }));
     const savedNames = new Set(saved.map(d => d.name));
-    return [...saved, ...defaults.filter(d => !savedNames.has(d.name))];
+    return [
+      ...saved,
+      ...defaults.filter(d => !savedNames.has(d.name)).map(d => ({ ...d, emoji: undefined as string | undefined })),
+    ];
   });
 
   // Reacts to category() signal — updates instantly when category changes
@@ -232,6 +257,8 @@ export class TransactionModalComponent {
     this.autoDetected.set(false);
     this.showAddCat.set(false);
     this.showAddItem.set(false);
+    this.showEmojiPick.set(false);
+    this.newCatEmoji.set('📂');
     this.newCatName  = '';
     this.newItemName = '';
     const defs = this.currentDefs();
@@ -291,11 +318,13 @@ export class TransactionModalComponent {
     const name = this.newCatName.trim();
     if (!name) return;
     const secKey = this.txType() === 'income' ? 'income' : 'expenses';
-    this.budgetState.addCategory(secKey, 'estimates', name);
+    this.budgetState.addCategory(secKey, 'estimates', name, this.newCatEmoji());
     this.category.set(name);
     this.item.set('Other');
     this.newCatName = '';
+    this.newCatEmoji.set('📂');
     this.showAddCat.set(false);
+    this.showEmojiPick.set(false);
   }
 
   confirmAddItem(): void {
