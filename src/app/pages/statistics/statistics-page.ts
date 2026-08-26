@@ -23,7 +23,16 @@ export class StatisticsPage {
   private importExport = inject(ImportExportService);
   private router = inject(Router);
 
-  allKeys = computed(() => Object.keys(this.state.data()).sort());
+  private validKey(k: string): boolean {
+    const p = k.split('-');
+    if (p.length < 2) return false;
+    const m = parseInt(p[1]);
+    return !isNaN(parseInt(p[0])) && !isNaN(m) && m >= 1 && m <= 12;
+  }
+
+  allKeys = computed(() =>
+    Object.keys(this.state.data()).filter(k => this.validKey(k)).sort()
+  );
   hasData = computed(() => this.allKeys().length > 0);
 
   monthData = computed(() => this.state.currentMonthData());
@@ -69,7 +78,7 @@ export class StatisticsPage {
       const exp = this.math.secTotal(dd.final.expenses) || this.math.secTotal(dd.estimates.expenses);
       const net = inc - exp;
       const [yr, mo] = k.split('-');
-      return { key: k, label: MONTHS[parseInt(mo)-1].slice(0,3) + ' ' + yr, inc, exp, net, isCurrent: k === this.state.currentKey() };
+      return { key: k, label: (MONTHS[parseInt(mo)-1] ?? '???').slice(0,3) + ' ' + yr, inc, exp, net, isCurrent: k === this.state.currentKey() };
     }).filter(Boolean)
   );
 
@@ -86,7 +95,7 @@ export class StatisticsPage {
       if (bestNet === null || net > bestNet) { bestNet = net; bestKey = k; }
       if (worstNet === null || net < worstNet) { worstNet = net; worstKey = k; }
     });
-    const moLabel = (k: string) => { const [yr, mo] = k.split('-'); return MONTHS[parseInt(mo)-1].slice(0,3) + ' ' + yr; };
+    const moLabel = (k: string) => { const [yr, mo] = k.split('-'); return (MONTHS[parseInt(mo)-1] ?? '???').slice(0,3) + ' ' + yr; };
     return { avgI: totI / keys.length, avgE: totE / keys.length, bestNet: bestNet!, bestLabel: moLabel(bestKey), worstNet: worstNet!, worstLabel: moLabel(worstKey), count: keys.length };
   });
 
@@ -134,7 +143,7 @@ export class StatisticsPage {
   trendConfig = computed((): ChartConfiguration | null => {
     if (this.allKeys().length <= 1) return null;
     const last = this.allKeys().slice(-8);
-    const labels = last.map(k => { const [yr, mo] = k.split('-'); return MONTHS[parseInt(mo)-1].slice(0,3) + "'"+yr.slice(2); });
+    const labels = last.map(k => { const [yr, mo] = k.split('-'); return (MONTHS[parseInt(mo)-1] ?? '???').slice(0,3) + "'"+yr.slice(2); });
     const incomes = last.map(k => { const dd = this.state.data()[k]; return this.math.secTotal(dd.final.income) || this.math.secTotal(dd.estimates.income); });
     const expenses = last.map(k => { const dd = this.state.data()[k]; return this.math.secTotal(dd.final.expenses) || this.math.secTotal(dd.estimates.expenses); });
     return { type: 'bar', data: { labels, datasets: [{ label: 'Income', data: incomes, backgroundColor: 'rgba(5,150,105,.6)', borderRadius: 3 }, { label: 'Expenses', data: expenses, backgroundColor: 'rgba(225,29,72,.6)', borderRadius: 3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: CF, color: '#475569', boxWidth: 12, boxHeight: 12 } }, tooltip: { callbacks: { label: (ctx: any) => ' ' + ctx.dataset.label + ': ' + this.math.fmt(ctx.raw) } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8' } }, y: { grid: { color: '#e2e8f0' }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8', callback: (v: any) => this.math.fmt(v) } } } } };
@@ -143,7 +152,7 @@ export class StatisticsPage {
   netTrendConfig = computed((): ChartConfiguration | null => {
     if (this.allKeys().length <= 1) return null;
     const last = this.allKeys().slice(-8);
-    const labels = last.map(k => { const [yr, mo] = k.split('-'); return MONTHS[parseInt(mo)-1].slice(0,3) + "'"+yr.slice(2); });
+    const labels = last.map(k => { const [yr, mo] = k.split('-'); return (MONTHS[parseInt(mo)-1] ?? '???').slice(0,3) + "'"+yr.slice(2); });
     const nets = last.map(k => { const dd = this.state.data()[k]; return (this.math.secTotal(dd.final.income) || this.math.secTotal(dd.estimates.income)) - (this.math.secTotal(dd.final.expenses) || this.math.secTotal(dd.estimates.expenses)); });
     return { type: 'line', data: { labels, datasets: [{ label: 'Net Balance', data: nets, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: nets.map(v => v >= 0 ? '#059669' : '#e11d48'), fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: any) => ' Net: ' + this.math.fmt(ctx.raw, true) } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8' } }, y: { grid: { color: '#e2e8f0' }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8', callback: (v: any) => this.math.fmt(v, true) } } } } };
   });
