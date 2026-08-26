@@ -120,6 +120,49 @@ export class BudgetStateService {
     });
   }
 
+  removeZeroItems(): void {
+    this.data.update(data => {
+      const d = JSON.parse(JSON.stringify(data)) as AllData;
+      const k = this.currentKey();
+      if (!d[k]) return data;
+      (['income', 'expenses'] as const).forEach(type => {
+        const sec = d[k].estimates[type];
+        Object.keys(sec).forEach(cat => {
+          sec[cat].items = sec[cat].items.filter((i: BudgetItem) => (i.amount ?? 0) !== 0);
+          if (sec[cat].items.length === 0) delete sec[cat];
+        });
+      });
+      return d;
+    });
+  }
+
+  resetCategories(): void {
+    this.data.update(data => {
+      const d = JSON.parse(JSON.stringify(data)) as AllData;
+      const k = this.currentKey();
+      if (!d[k]) d[k] = this.makeMonth();
+
+      const rebuild = (defs: { name: string; items: string[] }[], existing: BudgetSection): BudgetSection => {
+        const sec: BudgetSection = {};
+        defs.forEach(def => {
+          const exCat = existing[def.name];
+          sec[def.name] = {
+            collapsed: false,
+            items: def.items.map(name => {
+              const hit = exCat?.items.find((i: BudgetItem) => i.name === name);
+              return hit ?? { id: this.math.uid(), name, amount: 0 };
+            }),
+          };
+        });
+        return sec;
+      };
+
+      d[k].estimates.income   = rebuild(DEF_INCOME,   d[k].estimates.income);
+      d[k].estimates.expenses = rebuild(DEF_EXPENSES, d[k].estimates.expenses);
+      return d;
+    });
+  }
+
   copyFromEst(): void {
     this.data.update(data => {
       const d = JSON.parse(JSON.stringify(data)) as AllData;

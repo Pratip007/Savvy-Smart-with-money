@@ -132,6 +132,15 @@ export class BudgetPage implements OnInit {
   }
   exportCSV(): void { this.importExport.exportCSV(this.mode()); }
   copyFromEst(): void { this.state.copyFromEst(); this.toast.show('Copied from Estimates'); }
+
+  removeZeroItems(): void {
+    this.state.removeZeroItems();
+    this.toast.show('Zero-amount items removed');
+  }
+  resetCategories(): void {
+    if (confirm('Reset categories to defaults? Existing amounts are kept.'))
+      this.state.resetCategories();
+  }
   dlTemplate(): void { this.importExport.dlTemplate(); }
   print(): void { window.print(); }
   goToTransactions(): void { this.router.navigate(['/transactions']); }
