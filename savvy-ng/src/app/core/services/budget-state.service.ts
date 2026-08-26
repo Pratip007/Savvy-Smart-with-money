@@ -18,7 +18,7 @@ export class BudgetStateService {
 
   constructor(private storage: StorageService, private math: BudgetMathService) {
     this.data.set(storage.getBudget());
-    this.syncState.set(storage.getGsUrl() ? 'idle' : 'off');
+    this.syncState.set(storage.getFolderId() ? 'idle' : 'off');
     effect(() => { storage.saveBudget(this.data()); });
   }
 

@@ -5,6 +5,108 @@
   </div>
 } @else {
 
+  <!-- ── Year Overview ──────────────────────────────────────────────────────── -->
+  @if (hasYearData()) {
+    <div class="year-section-label">
+      <i class="fa-solid fa-calendar-days" style="color:var(--brand-600)"></i>
+      {{ state.currentYear() }} Year Overview
+    </div>
+
+    <!-- Year KPI cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value income">{{ yearInc() | fmtCurrency }}</div>
+        <div class="stat-sub">{{ yearKeys().length }} month{{ yearKeys().length === 1 ? '' : 's' }} tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value expense">{{ yearExp() | fmtCurrency }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Net Savings</div>
+        <div class="stat-value" [class.positive]="yearNet() >= 0" [class.negative]="yearNet() < 0">
+          {{ yearNet() | fmtCurrency:true }}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Annual Savings Rate</div>
+        <div class="stat-value" [class.positive]="yearSR() >= 0" [class.negative]="yearSR() < 0">
+          {{ yearSR() >= 0 ? '+' : '' }}{{ yearSR() }}%
+        </div>
+        <div class="stat-sub">of total income</div>
+      </div>
+    </div>
+
+    <!-- Monthly income vs expenses — full year bar chart -->
+    <div class="chart-card">
+      <div class="chart-card-title">
+        <i class="fa-solid fa-chart-column" style="color:var(--brand-600)"></i>
+        Monthly Income vs Expenses — {{ state.currentYear() }}
+      </div>
+      <app-chart-wrapper [config]="yearTrendConfig()" class="chart-wrap chart-h220"></app-chart-wrapper>
+    </div>
+
+    <!-- Annual expense breakdown pie -->
+    @if (yearCatPieConfig()) {
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <i class="fa-solid fa-chart-pie" style="color:var(--color-expense)"></i>
+          Annual Expense Breakdown — {{ state.currentYear() }}
+        </div>
+        <app-chart-wrapper [config]="yearCatPieConfig()" class="chart-wrap chart-h220"></app-chart-wrapper>
+      </div>
+    }
+
+    <!-- Top annual expense categories -->
+    @if (yearCatExp().length) {
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <i class="fa-solid fa-fire-flame-curved" style="color:#f59e0b"></i>
+          Top Annual Expense Categories
+        </div>
+        <div class="top-exp-list">
+          @for (exp of yearCatExp().slice(0, 5); track exp.n; let i = $index) {
+            <div class="texp-row">
+              <div class="texp-rank"
+                [style.background]="CCOLORS[i] + '20'"
+                [style.border-color]="CCOLORS[i] + '55'"
+                [style.color]="CCOLORS[i]">{{ i + 1 }}</div>
+              <div class="texp-body">
+                <div class="texp-top">
+                  <span class="texp-name">{{ exp.n }}</span>
+                  <span class="texp-val">{{ exp.v | fmtCurrency }}</span>
+                </div>
+                <div class="texp-track">
+                  <div class="texp-fill"
+                    [style.width.%]="exp.v / (yearCatExp()[0]?.v || 1) * 100"
+                    [style.background]="CCOLORS[i]"></div>
+                </div>
+                <div class="texp-pct">{{ (exp.v / (yearExp() || 1) * 100).toFixed(0) }}% of annual expenses</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Cumulative net savings line chart -->
+    @if (yearCumulConfig()) {
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <i class="fa-solid fa-chart-line" style="color:var(--brand-600)"></i>
+          Cumulative Net Savings — {{ state.currentYear() }}
+        </div>
+        <app-chart-wrapper [config]="yearCumulConfig()" class="chart-wrap chart-h180"></app-chart-wrapper>
+      </div>
+    }
+
+    <div class="month-section-label">
+      <i class="fa-solid fa-circle-dot" style="color:var(--brand-400,#60a5fa)"></i>
+      {{ monthLabel() }} — Monthly Detail
+    </div>
+  }
+
   <div class="stats-month-label">{{ monthLabel() }}</div>
 
   <!-- Monthly circle summary -->

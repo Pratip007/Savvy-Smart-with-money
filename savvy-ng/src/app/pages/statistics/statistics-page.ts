@@ -15,7 +15,7 @@ const CF = { family: "'Inter', system-ui, sans-serif" };
   standalone: true,
   imports: [ChartWrapperComponent, FmtCurrencyPipe],
   templateUrl: './statistics-page.html',
-  styles: [':host { display: block; padding: 12px; padding-bottom: 80px; }']
+  styleUrl: './statistics-page.scss',
 })
 export class StatisticsPage {
   state = inject(BudgetStateService);
@@ -146,6 +146,70 @@ export class StatisticsPage {
     const labels = last.map(k => { const [yr, mo] = k.split('-'); return MONTHS[parseInt(mo)-1].slice(0,3) + "'"+yr.slice(2); });
     const nets = last.map(k => { const dd = this.state.data()[k]; return (this.math.secTotal(dd.final.income) || this.math.secTotal(dd.estimates.income)) - (this.math.secTotal(dd.final.expenses) || this.math.secTotal(dd.estimates.expenses)); });
     return { type: 'line', data: { labels, datasets: [{ label: 'Net Balance', data: nets, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: nets.map(v => v >= 0 ? '#059669' : '#e11d48'), fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: any) => ' Net: ' + this.math.fmt(ctx.raw, true) } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8' } }, y: { grid: { color: '#e2e8f0' }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8', callback: (v: any) => this.math.fmt(v, true) } } } } };
+  });
+
+  // ── Year Overview ────────────────────────────────────────────────────────────
+
+  yearKeys = computed(() =>
+    Object.keys(this.state.data())
+      .filter(k => k.startsWith(String(this.state.currentYear())))
+      .sort()
+  );
+  hasYearData = computed(() => this.yearKeys().length > 0);
+
+  yearInc = computed(() => this.yearKeys().reduce((s, k) => {
+    const d = this.state.data()[k];
+    return s + (this.math.secTotal(d.final.income) || this.math.secTotal(d.estimates.income));
+  }, 0));
+  yearExp = computed(() => this.yearKeys().reduce((s, k) => {
+    const d = this.state.data()[k];
+    return s + (this.math.secTotal(d.final.expenses) || this.math.secTotal(d.estimates.expenses));
+  }, 0));
+  yearNet = computed(() => this.yearInc() - this.yearExp());
+  yearSR  = computed(() => this.yearInc() > 0 ? Math.round(this.yearNet() / this.yearInc() * 100) : 0);
+
+  yearCatExp = computed(() => {
+    const cats: Record<string, number> = {};
+    this.yearKeys().forEach(k => {
+      const d = this.state.data()[k];
+      const src = this.math.secTotal(d.final.expenses) > 0 ? d.final.expenses : d.estimates.expenses;
+      Object.entries(src).forEach(([cat, cd]) => { cats[cat] = (cats[cat] || 0) + this.math.catSum(cd); });
+    });
+    return Object.entries(cats).map(([n, v]) => ({ n, v })).filter(e => e.v > 0).sort((a, b) => b.v - a.v);
+  });
+
+  yearTrendConfig = computed((): ChartConfiguration | null => {
+    if (!this.yearKeys().length) return null;
+    const year = this.state.currentYear();
+    const labels   = MONTHS.map(m => m.slice(0, 3));
+    const incomes  = MONTHS.map((_, i) => { const k = `${year}-${String(i+1).padStart(2,'0')}`; const d = this.state.data()[k]; return d ? (this.math.secTotal(d.final.income)   || this.math.secTotal(d.estimates.income))   : 0; });
+    const expenses = MONTHS.map((_, i) => { const k = `${year}-${String(i+1).padStart(2,'0')}`; const d = this.state.data()[k]; return d ? (this.math.secTotal(d.final.expenses) || this.math.secTotal(d.estimates.expenses)) : 0; });
+    return { type: 'bar', data: { labels, datasets: [{ label: 'Income', data: incomes, backgroundColor: 'rgba(5,150,105,.6)', borderRadius: 3 }, { label: 'Expenses', data: expenses, backgroundColor: 'rgba(225,29,72,.6)', borderRadius: 3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: CF, color: '#475569', boxWidth: 12, boxHeight: 12 } }, tooltip: { callbacks: { label: (ctx: any) => ' ' + ctx.dataset.label + ': ' + this.math.fmt(ctx.raw) } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8' } }, y: { grid: { color: '#e2e8f0' }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8', callback: (v: any) => this.math.fmt(v) } } } } };
+  });
+
+  yearCatPieConfig = computed((): ChartConfiguration | null => {
+    const cats = this.yearCatExp(); if (!cats.length) return null;
+    const total = cats.reduce((s, e) => s + e.v, 0) || 1;
+    const top = cats.slice(0, 7); const rest = cats.slice(7).reduce((s, e) => s + e.v, 0);
+    const labels = rest > 0 ? [...top.map(e => e.n), 'Other'] : top.map(e => e.n);
+    const vals   = rest > 0 ? [...top.map(e => e.v), rest]    : top.map(e => e.v);
+    return { type: 'doughnut', data: { labels, datasets: [{ data: vals, backgroundColor: CCOLORS.slice(0, vals.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'right' as const, labels: { font: CF, color: '#475569', padding: 6, boxWidth: 10, boxHeight: 10, generateLabels: (chart: any) => chart.data.labels.map((lbl: string, i: number) => ({ text: lbl.slice(0,12)+' '+Math.round(vals[i]/total*100)+'%', fillStyle: CCOLORS[i], hidden: false, index: i })) } }, tooltip: { callbacks: { label: (ctx: any) => ' '+ctx.label+': '+this.math.fmt(ctx.raw) } } } } as any };
+  });
+
+  yearCumulConfig = computed((): ChartConfiguration | null => {
+    if (this.yearKeys().length < 2) return null;
+    const year = this.state.currentYear();
+    let cum = 0;
+    const labels: string[] = [];
+    const data: number[] = [];
+    MONTHS.forEach((m, i) => {
+      const k = `${year}-${String(i+1).padStart(2,'0')}`;
+      const d = this.state.data()[k];
+      cum += d ? ((this.math.secTotal(d.final.income) || this.math.secTotal(d.estimates.income)) - (this.math.secTotal(d.final.expenses) || this.math.secTotal(d.estimates.expenses))) : 0;
+      labels.push(m.slice(0, 3));
+      data.push(cum);
+    });
+    return { type: 'line', data: { labels, datasets: [{ label: 'Cumulative Net', data, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: data.map(v => v >= 0 ? '#059669' : '#e11d48'), fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: any) => ' Cumulative: '+this.math.fmt(ctx.raw, true) } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8' } }, y: { grid: { color: '#e2e8f0' }, ticks: { font: { family: CF.family, size: 10 }, color: '#94a3b8', callback: (v: any) => this.math.fmt(v, true) } } } } };
   });
 
   navigateToMonth(key: string): void {

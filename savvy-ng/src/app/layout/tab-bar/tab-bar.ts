@@ -7,6 +7,10 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   imports: [RouterLink, RouterLinkActive],
   template: `
     <nav id="tab-bar">
+      <a class="tab" routerLink="/transactions" routerLinkActive="active">
+        <i class="fa-solid fa-receipt"></i>
+        <span>Daily</span>
+      </a>
       <a class="tab" routerLink="/estimates" routerLinkActive="active">
         <i class="fa-solid fa-file-invoice-dollar"></i>
         <span>Estimates</span>
@@ -18,10 +22,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       <a class="tab" routerLink="/statistics" routerLinkActive="active">
         <i class="fa-solid fa-chart-pie"></i>
         <span>Statistics</span>
-      </a>
-      <a class="tab" routerLink="/transactions" routerLinkActive="active">
-        <i class="fa-solid fa-receipt"></i>
-        <span>Daily</span>
       </a>
       <a class="tab" routerLink="/settings" routerLinkActive="active">
         <i class="fa-solid fa-gear"></i>

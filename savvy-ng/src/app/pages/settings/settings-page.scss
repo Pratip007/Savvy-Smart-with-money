@@ -4,5 +4,30 @@
   padding-bottom: 80px;
 }
 
-.gmail-section, .notif-section { margin-top: 8px; }
-.gmail-status { display: flex; align-items: center; gap: 8px; color: var(--color-income); font-size: 13px; font-weight: 600; }
+.notif-section { margin-top: 8px; }
+
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.account-name  { font-weight: 600; font-size: 14px; }
+.account-email { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+
+.sheet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 2px;
+}

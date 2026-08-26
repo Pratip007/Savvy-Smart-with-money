@@ -1,16 +1,46 @@
+<!-- ── Google Account ─────────────────────────────────────── -->
 <div class="settings-section">
   <div class="settings-section-title">
-    <i class="fa-solid fa-cloud"></i> Google Sheets Database
+    <i class="fa-brands fa-google"></i> Google Account
   </div>
 
-  <div class="connection-pill" [class.connected]="isConnected()" [class.disconnected]="!isConnected()">
-    <i class="fa-solid" [class.fa-link]="isConnected()" [class.fa-link-slash]="!isConnected()"></i>
-    {{ isConnected() ? 'Connected' : 'Not Connected' }}
-  </div>
+  @if (!googleAuth.isAuthorized()) {
+    <!-- Not signed in -->
+    <p class="field-hint" style="margin-bottom:12px">
+      Sign in once — Savvy will automatically create a private spreadsheet in your
+      Google Drive and sync all your data to it. No setup needed.
+    </p>
+    <button class="btn btn-primary btn-full" (click)="signIn()">
+      <i class="fa-brands fa-google"></i> Sign in with Google
+    </button>
+  } @else {
+    <!-- Signed in -->
+    @if (googleAuth.userProfile(); as profile) {
+      <div class="account-card">
+        @if (profile.picture) {
+          <img class="account-avatar" [src]="profile.picture" alt="avatar" referrerpolicy="no-referrer">
+        }
+        <div class="account-info">
+          <div class="account-name">{{ profile.name }}</div>
+          <div class="account-email">{{ profile.email }}</div>
+        </div>
+      </div>
+    }
 
-  @if (isConnected()) {
-    <div class="url-display">{{ gsUrl() }}</div>
-    <div class="action-row" style="margin-bottom:8px">
+    <!-- Drive links -->
+    @if (folderUrl()) {
+      <a class="sheet-link" [href]="folderUrl()" target="_blank" rel="noopener">
+        <i class="fa-brands fa-google-drive"></i> Open Savvy folder in Drive
+      </a>
+    }
+    @if (spreadsheetUrl()) {
+      <a class="sheet-link" [href]="spreadsheetUrl()" target="_blank" rel="noopener" style="margin-top:4px">
+        <i class="fa-solid fa-table-cells"></i> Open {{ state.currentYear() }} spreadsheet
+      </a>
+    }
+
+    <!-- Sync actions -->
+    <div class="action-row" style="margin-top:12px;margin-bottom:8px">
       <button class="btn btn-primary" (click)="gsPush()">
         <i class="fa-solid fa-cloud-arrow-up"></i> Push to Sheets
       </button>
@@ -18,86 +48,48 @@
         <i class="fa-solid fa-cloud-arrow-down"></i> Pull from Sheets
       </button>
     </div>
+
+    <!-- Gmail sync -->
     <hr class="settings-divider">
-  }
+    <div class="settings-row-label" style="margin-bottom:6px">
+      <i class="fa-solid fa-envelope-open-text"></i> Gmail Transaction Sync
+    </div>
+    <div class="field-hint" style="margin-bottom:8px">
+      Import transactions from HDFC, ICICI, SBI, Axis, Kotak bank alert emails.
+    </div>
+    <div class="action-row" style="margin-bottom:4px">
+      <button class="btn btn-primary" [disabled]="gmail.isSyncing()" (click)="syncGmail()">
+        @if (gmail.isSyncing()) {
+          <i class="fa-solid fa-spinner fa-spin"></i> Syncing…
+        } @else {
+          <i class="fa-solid fa-envelope-open-text"></i> Sync Gmail Now
+        }
+      </button>
+    </div>
+    @if (gmail.lastSync()) {
+      <div class="field-hint">Last sync: {{ gmail.lastSync() | date:'MMM d, h:mm a' }}</div>
+    }
+    @if (gmail.importedCount() > 0) {
+      <div class="badge-row">
+        <span class="count-badge">
+          {{ gmail.importedCount() }} transaction{{ gmail.importedCount() === 1 ? '' : 's' }} imported
+        </span>
+      </div>
+    }
 
-  <div class="field-label">{{ isConnected() ? 'Update URL' : 'Apps Script Web App URL' }}</div>
-  <div class="field-hint">Paste the deployment URL from Google Apps Script</div>
-  <input
-    class="form-input"
-    [(ngModel)]="gsUrlInput"
-    placeholder="https://script.google.com/macros/s/…/exec"
-  >
-  <button class="btn btn-primary btn-full" (click)="gsConnect()">
-    <i class="fa-solid" [class.fa-rotate]="isConnected()" [class.fa-link]="!isConnected()"></i>
-    {{ isConnected() ? 'Update Connection' : 'Connect to Google Sheets' }}
-  </button>
-
-  @if (isConnected()) {
+    <!-- Sign out -->
+    <hr class="settings-divider">
     <button
       class="btn btn-secondary btn-full"
       style="color:var(--color-expense);border-color:var(--color-expense-border)"
-      (click)="gsDisconnect()"
+      (click)="signOut()"
     >
-      <i class="fa-solid fa-link-slash"></i> Disconnect
+      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
     </button>
-  }
-
-  <hr class="settings-divider">
-
-  <button class="guide-toggle-btn" (click)="toggleGuide()">
-    <span><i class="fa-regular fa-circle-question"></i> How to set up (step-by-step)</span>
-    <i class="fa-solid" [class.fa-chevron-up]="showGuide()" [class.fa-chevron-down]="!showGuide()"></i>
-  </button>
-
-  @if (showGuide()) {
-    <div class="guide-content">
-      <div style="margin-top:10px">
-        <div class="setup-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            Go to <a href="https://script.google.com" target="_blank">script.google.com</a>
-            and click <strong>New project</strong>
-            (a "Savvy Budget" spreadsheet will be created automatically in your Drive)
-          </div>
-        </div>
-
-        <div class="setup-step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <strong>Select all</strong> existing code and replace it with the code below,
-            then press <strong>Save</strong>:
-            <div class="code-block">
-              <pre>{{ GAS_CODE }}</pre>
-              <button class="code-copy-btn" (click)="copyScript()">
-                <i class="fa-regular fa-copy"></i> Copy
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="setup-step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            Click <strong>Deploy &rarr; New deployment</strong><br>
-            Set type to <strong>Web app</strong><br>
-            &bull; Execute as: <strong>Me</strong><br>
-            &bull; Who has access: <strong>Anyone</strong><br>
-            Click <strong>Deploy</strong>, authorize, then <strong>copy the Web App URL</strong>
-          </div>
-        </div>
-
-        <div class="setup-step">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            Paste the URL in the field above and tap <strong>Connect</strong>
-          </div>
-        </div>
-      </div>
-    </div>
   }
 </div>
 
+<!-- ── Preferences ────────────────────────────────────────── -->
 <div class="settings-section">
   <div class="settings-section-title">
     <i class="fa-solid fa-palette"></i> Preferences
@@ -119,57 +111,7 @@
   </div>
 </div>
 
-<div class="settings-section">
-  <div class="settings-section-title">
-    <i class="fa-brands fa-google"></i> Gmail Integration
-  </div>
-  <div class="gmail-section">
-    @if (!googleAuth.isAuthorized()) {
-      <div class="field-label">Google Client ID</div>
-      <div class="field-hint">Required to connect your Google account for Gmail syncing</div>
-      <input
-        class="form-input"
-        type="text"
-        [(ngModel)]="googleClientId"
-        placeholder="Paste your OAuth 2.0 Client ID here"
-      >
-      <div class="action-row" style="margin-bottom:8px">
-        <button class="btn btn-secondary" (click)="saveClientId()">
-          <i class="fa-solid fa-floppy-disk"></i> Save Client ID
-        </button>
-        <button class="btn btn-primary" (click)="connectGoogle()">
-          <i class="fa-brands fa-google"></i> Connect Google Account
-        </button>
-      </div>
-    } @else {
-      <div class="gmail-status">
-        <i class="fa-solid fa-circle-check"></i> Google Account Connected
-      </div>
-      <div class="action-row" style="margin-top:10px;margin-bottom:8px">
-        <button class="btn btn-primary" [disabled]="gmail.isSyncing()" (click)="syncGmail()">
-          @if (gmail.isSyncing()) {
-            <i class="fa-solid fa-spinner fa-spin"></i> Syncing…
-          } @else {
-            <i class="fa-solid fa-envelope-open-text"></i> Sync Gmail
-          }
-        </button>
-      </div>
-      @if (gmail.lastSync()) {
-        <div class="field-hint">
-          Last sync: {{ gmail.lastSync() | date:'MMM d, h:mm a' }}
-        </div>
-      }
-      @if (gmail.importedCount() > 0) {
-        <div class="badge-row">
-          <span class="count-badge">
-            {{ gmail.importedCount() }} transaction{{ gmail.importedCount() === 1 ? '' : 's' }} imported
-          </span>
-        </div>
-      }
-    }
-  </div>
-</div>
-
+<!-- ── Daily Reminders ────────────────────────────────────── -->
 <div class="settings-section">
   <div class="settings-section-title">
     <i class="fa-solid fa-bell"></i> Daily Reminders
@@ -211,6 +153,7 @@
   </div>
 </div>
 
+<!-- ── Data Management ────────────────────────────────────── -->
 <div class="settings-section">
   <div class="settings-section-title">
     <i class="fa-solid fa-hard-drive"></i> Data Management
@@ -228,5 +171,5 @@
 </div>
 
 <div class="app-footer-note">
-  Savvy &middot; Data stored locally in your browser
+  Savvy &middot; Data synced to your private Google Drive
 </div>

@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  padding: 12px;
+  padding-bottom: 80px;
+}
+
+.year-section-label {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary, #1e293b);
+  padding: 14px 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--brand-100, #dbeafe);
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
+
+.month-section-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  padding: 16px 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  margin-top: 4px;
+  margin-bottom: 4px;
+}

@@ -5,9 +5,7 @@ node_modules/
 dist/
 .angular/
 
-# Environment & secrets
-.env
-.env.local
+
 
 # OS & editor noise
 .DS_Store

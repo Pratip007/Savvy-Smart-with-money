@@ -17,7 +17,7 @@ export class HeaderComponent {
 
   gsUrl = computed(() => {
     this.state.syncState();
-    return typeof localStorage !== 'undefined' ? localStorage.getItem('gs_url_v1') || '' : '';
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('savvy_folder_id') || '' : '';
   });
 
   syncState = computed(() => this.state.syncState());
