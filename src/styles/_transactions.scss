@@ -815,10 +815,16 @@
   grid-auto-columns: calc((100% - 3 * 5px) / 4);
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none;
-  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand-300, #93c5fd) transparent;
+  padding-bottom: 6px;
 }
-.at-cat-grid--scroll::-webkit-scrollbar { display: none; }
+.at-cat-grid--scroll::-webkit-scrollbar { height: 3px; }
+.at-cat-grid--scroll::-webkit-scrollbar-track { background: transparent; }
+.at-cat-grid--scroll::-webkit-scrollbar-thumb {
+  background: var(--brand-300, #93c5fd);
+  border-radius: 99px;
+}
 
 .at-cat-tile {
   display: flex;
@@ -907,10 +913,16 @@
   grid-auto-columns: calc((100% - 3 * 5px) / 4);
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none;
-  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand-300, #93c5fd) transparent;
+  padding-bottom: 6px;
 }
-.at-item-chips--scroll::-webkit-scrollbar { display: none; }
+.at-item-chips--scroll::-webkit-scrollbar { height: 3px; }
+.at-item-chips--scroll::-webkit-scrollbar-track { background: transparent; }
+.at-item-chips--scroll::-webkit-scrollbar-thumb {
+  background: var(--brand-300, #93c5fd);
+  border-radius: 99px;
+}
 
 .at-item-chip {
   display: flex;
