@@ -85,8 +85,15 @@ export class SheetsService {
 
       this.state.syncState.set('ok');
       setTimeout(() => this.state.syncState.set('idle'), 3000);
-    } catch (e) {
+    } catch (e: any) {
       console.error('SheetsService.pushToSheets', e);
+      if (e?.message?.includes('401')) {
+        this.auth.signOut();
+        this.state.syncState.set('idle');
+        this.toast.show('Session expired — please sign in again');
+        this.auth.authorize(() => this.pushToSheets());
+        return;
+      }
       this.state.syncState.set('err');
       this.toast.show('Sync failed');
     }
@@ -111,8 +118,15 @@ export class SheetsService {
       this.state.syncState.set('ok');
       setTimeout(() => this.state.syncState.set('idle'), 3000);
       this.toast.show('Pulled from Sheets');
-    } catch (e) {
+    } catch (e: any) {
       console.error('SheetsService.pullFromSheets', e);
+      if (e?.message?.includes('401')) {
+        this.auth.signOut();
+        this.state.syncState.set('idle');
+        this.toast.show('Session expired — please sign in again');
+        this.auth.authorize(() => this.pullFromSheets());
+        return;
+      }
       this.state.syncState.set('err');
       this.toast.show('Pull failed');
     }
