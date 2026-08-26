@@ -50,6 +50,8 @@ export class TransactionsPage {
     this.filtered().forEach(tx => { (map[tx.date] = map[tx.date] || []).push(tx); });
     return Object.entries(map).sort(([a], [b]) => b.localeCompare(a)).map(([date, txns]) => ({
       date, label: this.dateLabel(date),
+      dayIn:  txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+      dayOut: txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
       dayNet: txns.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0),
       txns
     }));
@@ -68,6 +70,7 @@ export class TransactionsPage {
   setSearch(s: string): void { this.state.txnSearch.set(s); }
 
   openAdd(): void { this.txnModalRef.open(); }
+  openEdit(tx: Transaction): void { this.txnModalRef.open(tx); }
 
   onTxnSave(data: any): void {
     const { editId, ...tx } = data;

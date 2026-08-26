@@ -71,23 +71,45 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           </div>
         </div>
 
+        <!-- Category label + manage toggle -->
+        <div class="at-label-row">
+          <p class="at-label">Category</p>
+          <button class="at-manage-btn" (click)="manageCatMode.set(!manageCatMode()); editingCat.set(null)">
+            @if (manageCatMode()) { <i class="fa-solid fa-check"></i> Done }
+            @else { <i class="fa-solid fa-pen-to-square"></i> Edit }
+          </button>
+        </div>
+
         <!-- Category grid -->
-        <p class="at-label">Category</p>
         <div class="at-cat-grid"
              [class.at-cat-grid--fill]="!catScrollMode()"
              [class.at-cat-grid--scroll]="catScrollMode()">
           @for (d of currentDefs(); track d.name) {
-            <button class="at-cat-tile" [class.active]="category()===d.name"
-                    (click)="setCategory(d.name)">
-              <span class="at-cat-emoji">{{ d.emoji ?? catIcon(d.name) }}</span>
-              <span class="at-cat-name">{{ d.name }}</span>
-              @if (category()===d.name) {
-                <span class="at-cat-check"><i class="fa-solid fa-check"></i></span>
-              }
-            </button>
+            @if (manageCatMode()) {
+              <div class="at-cat-tile at-cat-tile-edit" [class.active]="category()===d.name">
+                <span class="at-cat-emoji">{{ d.emoji ?? catIcon(d.name) }}</span>
+                <span class="at-cat-name">{{ d.name }}</span>
+                <div class="at-cat-manage-btns">
+                  <button class="at-cat-act-btn at-cat-act-edit" (click)="startEditCat(d.name, d.emoji)">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="at-cat-act-btn at-cat-act-del" (click)="deleteCat(d.name)">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <button class="at-cat-tile" [class.active]="category()===d.name"
+                      (click)="setCategory(d.name)">
+                <span class="at-cat-emoji">{{ d.emoji ?? catIcon(d.name) }}</span>
+                <span class="at-cat-name">{{ d.name }}</span>
+                @if (category()===d.name) {
+                  <span class="at-cat-check"><i class="fa-solid fa-check"></i></span>
+                }
+              </button>
+            }
           }
-          <!-- Add new category tile -->
-          @if (!showAddCat()) {
+          @if (!manageCatMode() && !showAddCat()) {
             <button class="at-cat-tile at-cat-add-tile" (click)="showAddCat.set(true)">
               <span class="at-cat-emoji">➕</span>
               <span class="at-cat-name">New</span>
@@ -96,13 +118,30 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
         </div>
 
         @if (catScrollMode()) {
-          <p class="at-scroll-hint">
-            <i class="fa-solid fa-arrow-right-long"></i> scroll for more
-          </p>
+          <p class="at-scroll-hint"><i class="fa-solid fa-arrow-right-long"></i> scroll for more</p>
         }
 
-        <!-- Inline add-category input -->
-        @if (showAddCat()) {
+        <!-- Inline edit category (manage mode) -->
+        @if (manageCatMode() && editingCat()) {
+          <div class="at-add-cat-row">
+            <input class="at-emoji-input" type="text"
+                   [ngModel]="editCatEmoji()"
+                   (ngModelChange)="editCatEmoji.set($event || '📂')"
+                   maxlength="8" placeholder="😀">
+            <input class="at-add-cat-input" type="text" [(ngModel)]="editCatName"
+                   placeholder="Category name…" maxlength="40"
+                   (keyup.enter)="confirmEditCat()">
+            <button class="at-add-cat-ok" (click)="confirmEditCat()">
+              <i class="fa-solid fa-check"></i>
+            </button>
+            <button class="at-add-cat-cancel" (click)="editingCat.set(null)">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        }
+
+        <!-- Inline add-category input (normal mode) -->
+        @if (!manageCatMode() && showAddCat()) {
           <div class="at-add-cat-row">
             <input class="at-emoji-input" type="text"
                    [ngModel]="newCatEmoji()"
@@ -120,28 +159,53 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           </div>
         }
 
+        <!-- Item label + manage toggle -->
+        <div class="at-label-row">
+          <p class="at-label">Item</p>
+          <button class="at-manage-btn" (click)="managItemMode.set(!managItemMode()); editingItem.set(null)">
+            @if (managItemMode()) { <i class="fa-solid fa-check"></i> Done }
+            @else { <i class="fa-solid fa-pen-to-square"></i> Edit }
+          </button>
+        </div>
+
         <!-- Item chips — reactive to category() -->
-        <p class="at-label">Item</p>
         <div class="at-item-chips">
           @for (i of currentItems(); track i) {
-            <button class="at-item-chip" [class.active]="item()===i"
-                    (click)="item.set(i)">
-              {{ i }}
-            </button>
+            @if (managItemMode()) {
+              <div class="at-item-chip at-item-chip-manage">
+                @if (editingItem() === i) {
+                  <input class="at-item-edit-input" type="text" [(ngModel)]="editItemName"
+                         (keyup.enter)="confirmEditItem()">
+                  <button class="at-item-act-btn at-item-act-ok" (click)="confirmEditItem()">
+                    <i class="fa-solid fa-check"></i>
+                  </button>
+                } @else {
+                  <span class="at-item-chip-label">{{ i }}</span>
+                  <button class="at-item-act-btn at-item-act-edit" (click)="startEditItem(i)">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="at-item-act-btn at-item-act-del" (click)="deleteItem(i)">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                }
+              </div>
+            } @else {
+              <button class="at-item-chip" [class.active]="item()===i" (click)="item.set(i)">
+                {{ i }}
+              </button>
+            }
           }
-          @if (!showAddItem()) {
+          @if (!managItemMode() && !showAddItem()) {
             <button class="at-item-chip at-item-chip-add" (click)="showAddItem.set(true)">
               ➕ New item
             </button>
           }
         </div>
 
-        <p class="at-scroll-hint">
-          <i class="fa-solid fa-arrow-right-long"></i> scroll for more
-        </p>
+        <p class="at-scroll-hint"><i class="fa-solid fa-arrow-right-long"></i> scroll for more</p>
 
         <!-- Inline add-item input -->
-        @if (showAddItem()) {
+        @if (!managItemMode() && showAddItem()) {
           <div class="at-add-cat-row">
             <input class="at-add-cat-input" type="text" [(ngModel)]="newItemName"
                    placeholder="Item name…" maxlength="40"
@@ -197,6 +261,13 @@ export class TransactionModalComponent {
   readonly showEmojiPick  = signal(false);
   readonly newCatEmoji    = signal('📂');
   readonly emojiOptions   = EMOJI_OPTIONS;
+  readonly manageCatMode  = signal(false);
+  readonly managItemMode  = signal(false);
+  readonly editingCat     = signal<string | null>(null);
+  readonly editingItem    = signal<string | null>(null);
+  readonly editCatEmoji   = signal('📂');
+  editCatName  = '';
+  editItemName = '';
 
   // category & item are signals so computed(currentItems) reacts to changes
   readonly category = signal('');
@@ -266,6 +337,10 @@ export class TransactionModalComponent {
     this.showAddCat.set(false);
     this.showAddItem.set(false);
     this.showEmojiPick.set(false);
+    this.manageCatMode.set(false);
+    this.managItemMode.set(false);
+    this.editingCat.set(null);
+    this.editingItem.set(null);
     this.newCatEmoji.set('📂');
     this.newCatName  = '';
     this.newItemName = '';
@@ -317,6 +392,7 @@ export class TransactionModalComponent {
   setCategory(name: string): void {
     this.category.set(name);
     this.showAddItem.set(false);
+    this.editingItem.set(null);
     this.newItemName = '';
     const def = this.currentDefs().find(d => d.name === name);
     this.item.set(def?.items[0] ?? 'Other');
@@ -345,6 +421,56 @@ export class TransactionModalComponent {
     this.item.set(name);
     this.newItemName = '';
     this.showAddItem.set(false);
+  }
+
+  startEditCat(name: string, emoji?: string): void {
+    this.editingCat.set(name);
+    this.editCatName = name;
+    this.editCatEmoji.set(emoji ?? this.catIcon(name));
+  }
+
+  confirmEditCat(): void {
+    const oldName = this.editingCat();
+    const newName = this.editCatName.trim();
+    if (!oldName || !newName) return;
+    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
+    this.budgetState.renameCategory(secKey, 'estimates', oldName, newName, this.editCatEmoji());
+    if (this.category() === oldName) this.category.set(newName);
+    this.editingCat.set(null);
+  }
+
+  deleteCat(name: string): void {
+    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
+    this.budgetState.delCat(secKey, 'estimates', name);
+    if (this.category() === name) {
+      const defs = this.currentDefs();
+      this.category.set(defs[0]?.name ?? '');
+      this.item.set(defs[0]?.items[0] ?? 'Other');
+    }
+  }
+
+  startEditItem(name: string): void {
+    this.editingItem.set(name);
+    this.editItemName = name;
+  }
+
+  confirmEditItem(): void {
+    const oldName = this.editingItem();
+    const newName = this.editItemName.trim();
+    if (!oldName || !newName) return;
+    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
+    this.budgetState.renameItem(secKey, 'estimates', this.category(), oldName, newName);
+    if (this.item() === oldName) this.item.set(newName);
+    this.editingItem.set(null);
+  }
+
+  deleteItem(name: string): void {
+    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
+    this.budgetState.delItemByName(secKey, 'estimates', this.category(), name);
+    if (this.item() === name) {
+      const items = this.currentItems();
+      this.item.set(items[0] ?? 'Other');
+    }
   }
 
   onNoteInput(e: Event): void {

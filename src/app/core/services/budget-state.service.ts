@@ -114,6 +114,40 @@ export class BudgetStateService {
     });
   }
 
+  renameCategory(type: string, mode: string, oldName: string, newName: string, emoji?: string): void {
+    this.data.update(data => {
+      const d = JSON.parse(JSON.stringify(data)) as AllData;
+      const k = this.currentKey();
+      const sec = (d[k] as any)?.[mode]?.[type];
+      if (!sec?.[oldName]) return data;
+      sec[newName] = { ...sec[oldName], ...(emoji !== undefined ? { emoji } : {}) };
+      if (newName !== oldName) delete sec[oldName];
+      return d;
+    });
+  }
+
+  renameItem(type: string, mode: string, catName: string, oldName: string, newName: string): void {
+    this.data.update(data => {
+      const d = JSON.parse(JSON.stringify(data)) as AllData;
+      const k = this.currentKey();
+      const cat = (d[k] as any)?.[mode]?.[type]?.[catName];
+      if (!cat) return data;
+      const item = cat.items.find((i: BudgetItem) => i.name === oldName);
+      if (item) item.name = newName;
+      return d;
+    });
+  }
+
+  delItemByName(type: string, mode: string, catName: string, itemName: string): void {
+    this.data.update(data => {
+      const d = JSON.parse(JSON.stringify(data)) as AllData;
+      const k = this.currentKey();
+      const cat = (d[k] as any)?.[mode]?.[type]?.[catName];
+      if (cat) cat.items = cat.items.filter((i: BudgetItem) => i.name !== itemName);
+      return d;
+    });
+  }
+
   delItem(type: string, mode: string, catName: string, id: string): void {
     this.data.update(data => {
       const d = JSON.parse(JSON.stringify(data)) as AllData;

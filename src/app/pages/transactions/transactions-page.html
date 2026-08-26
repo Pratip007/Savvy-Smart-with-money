@@ -52,14 +52,17 @@
     <div class="txn-date-group">
       <div class="txn-date-hdr">
         <span class="txn-date-label">{{ group.label }}</span>
-        <span
-          class="txn-date-net"
-          [class.positive]="group.dayNet >= 0"
-          [class.negative]="group.dayNet < 0"
-        >{{ group.dayNet | fmtCurrency:true }}</span>
+        <div class="txn-date-totals">
+          @if (group.dayIn > 0) {
+            <span class="txn-date-total positive">+{{ group.dayIn | fmtCurrency }}</span>
+          }
+          @if (group.dayOut > 0) {
+            <span class="txn-date-total negative">-{{ group.dayOut | fmtCurrency }}</span>
+          }
+        </div>
       </div>
       @for (tx of group.txns; track tx.id) {
-        <app-transaction-item [tx]="tx" (delete)="onDelete(tx.id)" />
+        <app-transaction-item [tx]="tx" (edit)="openEdit(tx)" (delete)="onDelete(tx.id)" />
       }
     </div>
   }

@@ -7,7 +7,7 @@ import { FmtCurrencyPipe } from '../../pipes/fmt-currency.pipe';
   standalone: true,
   imports: [FmtCurrencyPipe],
   template: `
-    <div class="txn-item">
+    <div class="txn-item" (click)="edit.emit()">
       <div class="txn-icon" [class.txn-icon-income]="tx().type === 'income'" [class.txn-icon-expense]="tx().type === 'expense'">
         <i class="fa-solid" [class.fa-arrow-trend-up]="tx().type === 'income'" [class.fa-arrow-trend-down]="tx().type === 'expense'"></i>
       </div>
@@ -27,7 +27,7 @@ import { FmtCurrencyPipe } from '../../pipes/fmt-currency.pipe';
         <div class="txn-amount" [class.positive]="tx().type === 'income'" [class.negative]="tx().type === 'expense'">
           {{ tx().type === 'income' ? '+' : '-' }}{{ tx().amount | fmtCurrency }}
         </div>
-        <button class="txn-del-btn" (click)="delete.emit()">
+        <button class="txn-del-btn" (click)="$event.stopPropagation(); delete.emit()">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -36,5 +36,6 @@ import { FmtCurrencyPipe } from '../../pipes/fmt-currency.pipe';
 })
 export class TransactionItemComponent {
   tx = input.required<Transaction>();
+  edit = output<void>();
   delete = output<void>();
 }

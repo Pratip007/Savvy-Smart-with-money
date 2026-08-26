@@ -808,7 +808,7 @@
   overflow: hidden;
 }
 
-/* Scroll mode: many items — 3-row column flow, 3.3 tiles visible (partial peek), fade hint */
+/* Scroll mode: many items — 3-row column flow, 3.3 tiles visible (partial peek) */
 .at-cat-grid--scroll {
   grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
@@ -816,8 +816,6 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
-  mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 .at-cat-grid--scroll::-webkit-scrollbar { display: none; }
 
@@ -899,22 +897,32 @@
   cursor: pointer;
 }
 
-/* ── Item chips: 3-row column flow, natural width, right-edge fade hint ── */
+/* ── Item chips: fill (≤9) or scroll (>9) — mirrors category grid mechanism ── */
 .at-item-chips {
+  gap: 5px;
+  margin-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fill mode: wrap chips in up to 3 rows, no scroll */
+.at-item-chips--fill {
+  display: flex;
+  flex-wrap: wrap;
+  max-height: calc(3 * 30px + 2 * 5px);
+  overflow: hidden;
+}
+
+/* Scroll mode: 3-row column flow, natural-width chips, horizontal scroll */
+.at-item-chips--scroll {
   display: grid;
   grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
   grid-auto-columns: max-content;
-  gap: 5px;
-  margin-bottom: 6px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
-  mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
-.at-item-chips::-webkit-scrollbar { display: none; }
+.at-item-chips--scroll::-webkit-scrollbar { display: none; }
 
 .at-item-chip {
   padding: 5px 11px;
@@ -1082,3 +1090,122 @@
   font-size: 12px;
 }
 .at-action-continue:hover { filter: brightness(0.96); }
+
+/* ── Item chips base (always 3-row horizontal scroll) ── */
+.at-item-chips {
+  display: grid;
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.at-item-chips::-webkit-scrollbar { display: none; }
+
+/* ── Label row: label + Edit/Done toggle ── */
+.at-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.at-label-row .at-label { margin-bottom: 0; }
+
+.at-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--brand-300, var(--brand-400));
+  background: var(--brand-50, #eff6ff);
+  color: var(--brand-600);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.at-manage-btn:active { transform: scale(0.95); }
+
+/* ── Category tile in manage mode (div, not button) ── */
+.at-cat-tile-edit {
+  cursor: default;
+  overflow: hidden;
+}
+
+/* Bottom half overlay with edit + delete */
+.at-cat-manage-btns {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 0 3px;
+  background: rgba(255,255,255,0.92);
+  border-top: 1px solid var(--border-light);
+}
+
+.at-cat-act-btn {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.at-cat-act-btn:active { transform: scale(0.88); }
+
+.at-cat-act-edit {
+  background: var(--brand-100, #dbeafe);
+  color: var(--brand-600);
+}
+.at-cat-act-del {
+  background: var(--color-expense-bg, #fff1f2);
+  color: var(--color-expense, #e11d48);
+}
+
+/* ── Item chip in manage mode ── */
+.at-item-chip-manage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--border);
+  background: var(--surface-alt);
+  white-space: nowrap;
+}
+
+.at-item-chip-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.at-item-edit-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  width: 70px;
+}
+
+.at-item-act-btn {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.at-item-act-btn:active { transform: scale(0.88); }
+
+.at-item-act-ok    { background: var(--brand-600); color: #fff; }
+.at-item-act-edit  { background: var(--brand-100, #dbeafe); color: var(--brand-600); }
+.at-item-act-del   { background: var(--color-expense-bg, #fff1f2); color: var(--color-expense, #e11d48); }
