@@ -522,7 +522,7 @@ export class SheetsService {
     // 5. DAILY TRANSACTIONS
     // ═══════════════════════════════════════════════════════
     secHeader('📝   DAILY TRANSACTIONS', C.lightYellow, { red: 0.1, green: 0.1, blue: 0.1 });
-    colHeader('Date', 'Type', 'Category', 'Item / Merchant', 'Amount', 'Note');
+    colHeader('Date / Time', 'Type', 'Category', 'Item / Merchant', 'Amount', 'Note');
 
     const txns = this.txnSvc.getTxns(mk).slice().sort((a, b) => a.date.localeCompare(b.date));
     if (!txns.length) {
@@ -531,7 +531,8 @@ export class SheetsService {
       style(r, r + 1, 0, COLS, { textFormat: { italic: true }, horizontalAlignment: 'LEFT' });
     } else {
       txns.forEach((t, i) => {
-        const r = row(t.date, t.type === 'income' ? '▲ Income' : '▼ Expense', t.category, t.item, fmt(t.amount), t.note || '');
+        const dateTime = t.time ? `${t.date}  ${t.time}` : t.date;
+        const r = row(dateTime, t.type === 'income' ? '▲ Income' : '▼ Expense', t.category, t.item, fmt(t.amount), t.note || '');
         style(r, r + 1, 0, COLS, { backgroundColor: i % 2 === 0 ? C.white : C.altRow });
         style(r, r + 1, 1, 2, { textFormat: { foregroundColor: t.type === 'income' ? C.greenText : C.redText } });
         style(r, r + 1, 4, 5, { horizontalAlignment: 'RIGHT' });
@@ -539,7 +540,7 @@ export class SheetsService {
     }
 
     // ── Column widths & freeze ────────────────────────────────────────────────
-    colW(0, 1, 150); colW(1, 2, 130); colW(2, 3, 130); colW(3, 4, 200); colW(4, 5, 120); colW(5, 6, 140);
+    colW(0, 1, 160); colW(1, 2, 120); colW(2, 3, 130); colW(3, 4, 200); colW(4, 5, 120); colW(5, 6, 140);
     req.push({ updateSheetProperties: { properties: { sheetId, gridProperties: { frozenRowCount: 1 } }, fields: 'gridProperties.frozenRowCount' } });
 
     return { values, requests: req };
@@ -627,10 +628,10 @@ export class SheetsService {
   }
 
   private txnRows(monthKeys: string[]): any[][] {
-    const rows: any[][] = [['MonthKey','ID','Date','Type','Category','Item','Amount','Note','Source']];
+    const rows: any[][] = [['MonthKey','ID','Date','Type','Category','Item','Amount','Note','Source','Time']];
     this.txnSvc.allTxnsFlat()
       .filter(t => monthKeys.includes(t.monthKey))
-      .forEach(t => rows.push([t.monthKey, t.id, t.date, t.type, t.category, t.item, t.amount, t.note, t.source]));
+      .forEach(t => rows.push([t.monthKey, t.id, t.date, t.type, t.category, t.item, t.amount, t.note, t.source, t.time ?? '']));
     return rows;
   }
 

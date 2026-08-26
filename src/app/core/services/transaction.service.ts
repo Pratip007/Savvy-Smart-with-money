@@ -70,7 +70,7 @@ export class TransactionService {
 
   txnsFromRows(rows: any[][]): void {
     rows.forEach(r => {
-      const [monthKey, id, date, type, category, item, amount, note, source] = r.map((c: any) => String(c ?? ''));
+      const [monthKey, id, date, type, category, item, amount, note, source, time] = r.map((c: any) => String(c ?? ''));
       if (!monthKey || !id || !date || !type) return;
       this.state.data.update(data => {
         const d = JSON.parse(JSON.stringify(data)) as AllData;
@@ -78,7 +78,7 @@ export class TransactionService {
         if (!d[monthKey].transactions) d[monthKey].transactions = [];
         if (!d[monthKey].transactions.find(t => t.id === id)) {
           d[monthKey].transactions.push({
-            id, date, type: type as any, category, item,
+            id, date, time: time || undefined, type: type as any, category, item,
             amount: parseFloat(amount) || 0, note: note || '', source: (source || 'bank') as any
           });
         }
