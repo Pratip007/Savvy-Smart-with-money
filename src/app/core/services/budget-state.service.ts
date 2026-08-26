@@ -43,8 +43,8 @@ export class BudgetStateService {
 
   makeMonth(): MonthData {
     return {
-      estimates: { income: this.buildSec(DEF_INCOME), expenses: this.buildSec(DEF_EXPENSES) },
-      final: { income: this.buildSec(DEF_INCOME), expenses: this.buildSec(DEF_EXPENSES) },
+      estimates: { income: {}, expenses: {} },
+      final:     { income: {}, expenses: {} },
       transactions: []
     };
   }

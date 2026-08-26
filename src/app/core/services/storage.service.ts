@@ -3,7 +3,7 @@ import { AllData } from '../models/budget.model';
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
-  private readonly BUDGET_KEY    = 'budgetv3';
+  private readonly BUDGET_KEY    = 'budgetv4';
   private readonly CURRENCY_KEY  = 'budget_currency';
   private readonly FOLDER_ID_KEY = 'savvy_folder_id';
 
