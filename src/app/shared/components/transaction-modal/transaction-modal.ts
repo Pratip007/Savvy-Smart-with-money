@@ -116,8 +116,7 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
 
         <!-- Item chips — reactive to category() -->
         <p class="at-label">Item</p>
-        <div class="at-item-chips"
-             [class.at-item-chips--scroll]="itemScrollMode()">
+        <div class="at-item-chips">
           @for (i of currentItems(); track i) {
             <button class="at-item-chip" [class.active]="item()===i"
                     (click)="item.set(i)">
