@@ -96,29 +96,20 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
         <!-- Inline add-category input -->
         @if (showAddCat()) {
           <div class="at-add-cat-row">
-            <button class="at-emoji-btn" (click)="showEmojiPick.set(!showEmojiPick())">
-              {{ newCatEmoji() }}
-            </button>
+            <input class="at-emoji-input" type="text"
+                   [ngModel]="newCatEmoji()"
+                   (ngModelChange)="newCatEmoji.set($event || '📂')"
+                   maxlength="8" placeholder="😀">
             <input class="at-add-cat-input" type="text" [(ngModel)]="newCatName"
                    placeholder="Category name…" maxlength="40"
                    (keyup.enter)="confirmAddCat()">
             <button class="at-add-cat-ok" (click)="confirmAddCat()">
               <i class="fa-solid fa-check"></i>
             </button>
-            <button class="at-add-cat-cancel" (click)="showAddCat.set(false); showEmojiPick.set(false); newCatName=''">
+            <button class="at-add-cat-cancel" (click)="showAddCat.set(false); newCatName=''">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
-          @if (showEmojiPick()) {
-            <div class="at-emoji-grid">
-              @for (e of emojiOptions; track e) {
-                <button class="at-emoji-opt" [class.selected]="newCatEmoji()===e"
-                        (click)="newCatEmoji.set(e); showEmojiPick.set(false)">
-                  {{ e }}
-                </button>
-              }
-            </div>
-          }
         }
 
         <!-- Item chips — reactive to category() -->
