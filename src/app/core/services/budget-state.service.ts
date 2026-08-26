@@ -120,13 +120,13 @@ export class BudgetStateService {
     });
   }
 
-  removeZeroItems(): void {
+  removeZeroItems(mode: 'estimates' | 'final' = 'estimates'): void {
     this.data.update(data => {
       const d = JSON.parse(JSON.stringify(data)) as AllData;
       const k = this.currentKey();
       if (!d[k]) return data;
       (['income', 'expenses'] as const).forEach(type => {
-        const sec = d[k].estimates[type];
+        const sec = d[k][mode][type];
         Object.keys(sec).forEach(cat => {
           sec[cat].items = sec[cat].items.filter((i: BudgetItem) => (i.amount ?? 0) !== 0);
           if (sec[cat].items.length === 0) delete sec[cat];
@@ -136,7 +136,7 @@ export class BudgetStateService {
     });
   }
 
-  resetCategories(): void {
+  resetCategories(mode: 'estimates' | 'final' = 'estimates'): void {
     this.data.update(data => {
       const d = JSON.parse(JSON.stringify(data)) as AllData;
       const k = this.currentKey();
@@ -157,8 +157,8 @@ export class BudgetStateService {
         return sec;
       };
 
-      d[k].estimates.income   = rebuild(DEF_INCOME,   d[k].estimates.income);
-      d[k].estimates.expenses = rebuild(DEF_EXPENSES, d[k].estimates.expenses);
+      d[k][mode].income   = rebuild(DEF_INCOME,   d[k][mode].income);
+      d[k][mode].expenses = rebuild(DEF_EXPENSES, d[k][mode].expenses);
       return d;
     });
   }

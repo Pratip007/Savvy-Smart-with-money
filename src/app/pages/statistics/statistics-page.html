@@ -107,7 +107,9 @@
     </div>
   }
 
-  <div class="stats-month-label">{{ monthLabel() }}</div>
+  @if (!hasYearData()) {
+    <div class="stats-month-label">{{ monthLabel() }}</div>
+  }
 
   <!-- Monthly circle summary -->
   @if (monthlyCircleConfig()) {

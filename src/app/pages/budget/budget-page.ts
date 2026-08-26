@@ -134,12 +134,15 @@ export class BudgetPage implements OnInit {
   copyFromEst(): void { this.state.copyFromEst(); this.toast.show('Copied from Estimates'); }
 
   removeZeroItems(): void {
-    this.state.removeZeroItems();
+    this.state.removeZeroItems(this.mode());
+    this.sheets.schedulePush();
     this.toast.show('Zero-amount items removed');
   }
   resetCategories(): void {
-    if (confirm('Reset categories to defaults? Existing amounts are kept.'))
-      this.state.resetCategories();
+    if (confirm('Reset categories to defaults? Existing amounts are kept.')) {
+      this.state.resetCategories(this.mode());
+      this.sheets.schedulePush();
+    }
   }
   dlTemplate(): void { this.importExport.dlTemplate(); }
   print(): void { window.print(); }

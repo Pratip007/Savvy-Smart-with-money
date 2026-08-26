@@ -117,6 +117,8 @@
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
+.circle-net-value.positive { color: var(--color-positive); }
+.circle-net-value.negative { color: var(--color-negative); }
 
 .circle-sr {
   font-size: 11px;
@@ -218,6 +220,8 @@
   font-size: 16px; font-weight: 700;
   font-variant-numeric: tabular-nums; letter-spacing: -.4px;
 }
+.insight-value.positive { color: var(--color-positive); }
+.insight-value.negative { color: var(--color-negative); }
 
 .insight-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 
