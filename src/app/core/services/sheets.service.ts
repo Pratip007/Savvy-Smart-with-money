@@ -528,9 +528,17 @@ export class SheetsService {
 
   // ── Data helpers ──────────────────────────────────────────────────────────────
 
+  private isValidMonthKey(k: string): boolean {
+    const parts = k.split('-');
+    if (parts.length < 2) return false;
+    const y = parseInt(parts[0]);
+    const m = parseInt(parts[1]);
+    return !isNaN(y) && !isNaN(m) && m >= 1 && m <= 12;
+  }
+
   private groupByYear(keys: string[]): Map<number, string[]> {
     const map = new Map<number, string[]>();
-    keys.forEach(k => {
+    keys.filter(k => this.isValidMonthKey(k)).forEach(k => {
       const y = parseInt(k.split('-')[0]);
       if (!map.has(y)) map.set(y, []);
       map.get(y)!.push(k);
@@ -543,9 +551,11 @@ export class SheetsService {
   }
 
   private toMonthLabel(mk: string): string {
-    const [, m] = mk.split('-').map(Number);
-    const year  = mk.split('-')[0];
-    return `${MONTH_NAMES[m - 1].slice(0, 3)} ${year}`;  // "Aug 2026"
+    const parts = mk.split('-');
+    const year  = parts[0];
+    const m     = parseInt(parts[1]);
+    if (isNaN(m) || m < 1 || m > 12) return mk;
+    return `${MONTH_NAMES[m - 1].slice(0, 3)} ${year}`;
   }
 
   private txnRows(monthKeys: string[]): any[][] {
