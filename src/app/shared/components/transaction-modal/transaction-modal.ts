@@ -141,22 +141,17 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           }
         </div>
 
-        <!-- Primary save button -->
-        <button class="at-save-btn" (click)="saveAndClose()">
-          <i class="fa-solid fa-check"></i>
-          {{ editId() ? 'Update' : 'Save' }} Transaction
-        </button>
-
-        <!-- 3-button action row -->
+        <!-- Action row: Cancel | Save | Continue -->
         <div class="at-action-row">
           <button class="at-action-btn at-action-cancel" (click)="cancel()">
             Cancel
           </button>
-          <button class="at-action-btn at-action-continue" (click)="saveAndContinue()">
-            <i class="fa-solid fa-plus"></i> Continue
+          <button class="at-action-btn at-action-save" (click)="saveAndClose()">
+            <i class="fa-solid fa-check"></i>
+            {{ editId() ? 'Update' : 'Save' }}
           </button>
-          <button class="at-action-btn at-action-otherday" (click)="saveAndOtherDay()">
-            <i class="fa-solid fa-calendar-days"></i> Other Day
+          <button class="at-action-btn at-action-continue" (click)="saveAndContinue()">
+            <i class="fa-solid fa-rotate-right"></i> Continue
           </button>
         </div>
       </div>
