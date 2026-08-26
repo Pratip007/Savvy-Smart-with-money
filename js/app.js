@@ -9,57 +9,70 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 const CCOLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 
 const DEF_INCOME = [
-  { name: 'Employment', items: ['Salary', 'Bonus', 'Overtime'] },
-  { name: 'Business', items: ['Freelance', 'Consulting'] },
-  { name: 'Investments', items: ['Dividends', 'Interest', 'Rental Income'] },
-  { name: 'Other Income', items: ['Gifts', 'Tax Refund', 'Other'] }
+  { name: 'Employment', items: ['Salary', 'Bonus', 'Overtime', 'Commission', 'Part-time Job', 'Arrears'] },
+  { name: 'Business', items: ['Freelance', 'Consulting', 'Side Hustle', 'Product Sales', 'Service Income'] },
+  { name: 'Investments', items: ['Dividends', 'Interest', 'Rental Income', 'Capital Gains', 'Mutual Funds', 'Crypto', 'Fixed Deposit'] },
+  { name: 'Passive Income', items: ['Royalties', 'Affiliate Income', 'Ad Revenue', 'Digital Products', 'License Fees'] },
+  { name: 'Government & Benefits', items: ['Tax Refund', 'Government Subsidy', 'Pension', 'Scholarship', 'Insurance Claim'] },
+  { name: 'Other Income', items: ['Gifts', 'Lottery / Winnings', 'Cashback & Rewards', 'Sale of Assets', 'Other'] }
 ];
 
 const DEF_EXPENSES = [
-  { name: 'Housing', items: ['Rent / Mortgage', 'Electricity', 'Water', 'Internet', 'Phone', 'Maintenance'] },
-  { name: 'Food', items: ['Groceries', 'Dining Out', 'Coffee & Snacks', 'Food Delivery'] },
-  { name: 'Transport', items: ['Car Payment', 'Fuel / Gas', 'Car Insurance', 'Public Transit'] },
-  { name: 'Health', items: ['Health Insurance', 'Doctor / Hospital', 'Pharmacy', 'Gym'] },
-  { name: 'Entertainment', items: ['Streaming', 'Movies & Events', 'Hobbies', 'Gaming'] },
-  { name: 'Personal Care', items: ['Haircut', 'Beauty', 'Clothing', 'Accessories'] },
-  { name: 'Education', items: ['Books', 'Online Courses', 'Subscriptions', 'Tuition'] },
-  { name: 'Savings', items: ['Emergency Fund', 'Retirement', 'Investments', 'Goals'] },
-  { name: 'Debt', items: ['Credit Card', 'Student Loan', 'Personal Loan'] },
-  { name: 'Misc', items: ['Charity', 'Gifts & Presents', 'Pet Care', 'Unexpected'] }
+  { name: 'Housing', items: ['Rent / Mortgage', 'Electricity', 'Water', 'Gas / LPG', 'Internet', 'Phone', 'Maintenance', 'Property Tax', 'Home Insurance', 'Maid / Cleaning', 'Society / HOA Fee'] },
+  { name: 'Food', items: ['Groceries', 'Vegetables & Fruits', 'Dining Out', 'Coffee & Snacks', 'Food Delivery', 'Bakery & Sweets', 'Meal Prep / Tiffin'] },
+  { name: 'Transport', items: ['Car Payment / EMI', 'Fuel / Gas', 'Car Insurance', 'Public Transit', 'Taxi / Cab / Auto', 'Parking', 'Vehicle Maintenance', 'Toll & Fastag', 'Bike Service'] },
+  { name: 'Health', items: ['Health Insurance', 'Doctor / Hospital', 'Pharmacy', 'Gym', 'Dental', 'Vision / Optometrist', 'Mental Health', 'Supplements / Vitamins', 'Lab Tests'] },
+  { name: 'Family', items: ['Parents Support', 'Spouse Allowance', 'Children Expenses', 'Siblings Support', 'Baby Care', 'School Fees', 'Daycare'] },
+  { name: 'Entertainment', items: ['Streaming (Netflix/Prime)', 'OTT / Music Apps', 'Movies & Events', 'Hobbies', 'Gaming', 'Books & Magazines', 'Sports & Fitness', 'Concerts & Shows'] },
+  { name: 'Personal Care', items: ['Haircut', 'Beauty & Salon', 'Skincare', 'Clothing', 'Accessories', 'Toiletries', 'Laundry', 'Shoes & Bags'] },
+  { name: 'Education', items: ['Books', 'Online Courses', 'Coaching / Tuition', 'Stationery', 'School / College Fees', 'Exam Fees', 'Language Classes'] },
+  { name: 'Technology', items: ['Mobile Recharge', 'Cloud Storage', 'Software Subscriptions', 'Hardware / Gadgets', 'App Purchases', 'Domain & Hosting'] },
+  { name: 'Travel', items: ['Flight Tickets', 'Train / Bus Tickets', 'Hotel / Stay', 'Local Travel', 'Travel Insurance', 'Activities & Tours', 'Visa Fees'] },
+  { name: 'Savings & Investments', items: ['Emergency Fund', 'Retirement / PPF / NPS', 'Mutual Fund SIP', 'Stock Investments', 'Gold / Silver', 'Goals / Targets', 'House Down Payment', 'Kids Education Fund', 'Vacation Fund'] },
+  { name: 'Debt & Loans', items: ['Credit Card Bill', 'Home Loan EMI', 'Car Loan EMI', 'Personal Loan EMI', 'Student Loan', 'Other EMI'] },
+  { name: 'Utilities & Bills', items: ['DTH / Cable TV', 'Newspaper', 'Subscriptions', 'Insurance Premium', 'Locker Fee'] },
+  { name: 'Misc', items: ['Charity / Donation', 'Gifts & Presents', 'Pet Care', 'Bank Charges', 'ATM Fees', 'Fines & Penalties', 'Unexpected / Emergency', 'Office Expenses'] }
 ];
 
 const GS_KEY = 'gs_url_v1';
 
 const GAS_CODE = `var DATA_SHEET = '_Data';
+var TXN_SHEET  = '_Transactions';
 var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-/* ── READ: return raw sync data for the app to pull ── */
+/* ── READ: return budget rows + all transactions ── */
 function doGet(e) {
   try {
     var ss = getSpreadsheet();
     var ds = ss.getSheetByName(DATA_SHEET);
     var rows = ds && ds.getLastRow() > 0 ? ds.getDataRange().getValues() : [];
-    return respond(JSON.stringify({ ok: true, rows: rows }));
+    var ts = ss.getSheetByName(TXN_SHEET);
+    var txnRows = [];
+    if (ts && ts.getLastRow() > 1) {
+      txnRows = ts.getRange(2, 1, ts.getLastRow() - 1, 9).getValues();
+    }
+    return respond(JSON.stringify({ ok: true, rows: rows, txnRows: txnRows }));
   } catch(err) {
     return respond(JSON.stringify({ ok: false, error: err.message }));
   }
 }
 
-/* ── WRITE: save raw data + rebuild one sheet per month ── */
+/* ── WRITE: save budget + transactions, rebuild month sheets ── */
 function doPost(e) {
   try {
     var p = JSON.parse(e.postData.contents);
     var ss = getSpreadsheet();
     if (p.rows && p.rows.length) {
-      saveRaw(ss, p.rows);          // write _Data (visible for now)
-      buildSheets(ss, p.rows);      // build month sheets
-      // Hide _Data only after month sheets exist (Sheets requires 1 visible sheet)
+      saveRaw(ss, p.rows);
+      buildSheets(ss, p.rows);
       var ds = ss.getSheetByName(DATA_SHEET);
       if (ds) try { ds.hideSheet(); } catch(x) {}
     }
+    if (p.transactions && p.transactions.length) {
+      saveTxnSheet(ss, p.transactions);
+    }
     return respond(JSON.stringify({ ok: true }));
   } catch(err) {
-    // Always return JSON so CORS headers are present even on error
     return respond(JSON.stringify({ ok: false, error: err.message }));
   }
 }
@@ -84,9 +97,10 @@ function buildSheets(ss, rows) {
   var keys = Object.keys(months).sort();
   var names = keys.map(keyName);
 
-  // Remove sheets for months no longer in the data
+  // Remove sheets for months no longer in the data (keep _Data and _Transactions)
   ss.getSheets().forEach(function(s) {
-    if (s.getName() !== DATA_SHEET && names.indexOf(s.getName()) < 0) ss.deleteSheet(s);
+    var n = s.getName();
+    if (n !== DATA_SHEET && n !== TXN_SHEET && names.indexOf(n) < 0) ss.deleteSheet(s);
   });
 
   // Build each month sheet and place in chronological order
@@ -234,7 +248,181 @@ function getSpreadsheet() {
 
 function respond(txt) {
   return ContentService.createTextOutput(txt).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ── Save all transactions to _Transactions sheet ── */
+function saveTxnSheet(ss, txns) {
+  var s = ss.getSheetByName(TXN_SHEET) || ss.insertSheet(TXN_SHEET);
+  try { s.showSheet(); } catch(x) {}
+  s.clearContents();
+  var hdr = [['MonthKey','ID','Date','Type','Category','Item','Amount','Note','Source']];
+  var data = txns.map(function(t) {
+    return [t.monthKey||'',t.id||'',t.date||'',t.type||'',t.category||'',t.item||'',parseFloat(t.amount)||0,t.note||'',t.source||'manual'];
+  });
+  s.getRange(1,1,hdr.length + data.length, 9).setValues(hdr.concat(data));
+  s.setTabColor('#6366f1');
+  try { s.hideSheet(); } catch(x) {}
+}
+
+/* ── GMAIL BANK EMAIL SYNC ───────────────────────────────── */
+/* SETUP: In Apps Script editor → Extensions → Apps Script → Triggers
+   Click "+ Add Trigger" → Function: syncBankEmails
+   Event source: Time-driven → Hour timer → Every 1 hour            */
+function syncBankEmails() {
+  var ss = getSpreadsheet();
+  var ts = ss.getSheetByName(TXN_SHEET) || ss.insertSheet(TXN_SHEET);
+  if (ts.getLastRow() === 0) {
+    ts.appendRow(['MonthKey','ID','Date','Type','Category','Item','Amount','Note','Source']);
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var procList;
+  try { procList = JSON.parse(props.getProperty('PROC_EMAILS') || '[]'); } catch(e2) { procList = []; }
+  var seen = {};
+  procList.forEach(function(id) { seen[id] = true; });
+
+  var queries = [
+    'from:(alerts@hdfcbank.net OR hdfcbank@hdfcbank.net) subject:(debit OR credit OR transaction)',
+    'from:(donotreply@sbi.co.in OR alerts@sbi.co.in) subject:(debit OR credit)',
+    'from:(icicibank@icicibank.com OR alerts@icicibank.com) subject:(transaction OR alert)',
+    'from:(noreply@kotak.com OR alerts@kotak.com) subject:(debit OR credit)',
+    'from:(axisbank@axisbank.com OR alerts@axisbank.com) subject:(transaction OR debit)',
+    'from:(noreply@indusind.com OR alerts@indusind.com) subject:(debit OR credit)'
+  ];
+
+  var newRows = [];
+  var newIds  = [];
+
+  queries.forEach(function(q) {
+    try {
+      var threads = GmailApp.search(q + ' newer_than:7d', 0, 30);
+      threads.forEach(function(thread) {
+        thread.getMessages().forEach(function(msg) {
+          var mid = msg.getId();
+          if (seen[mid]) return;
+          seen[mid] = true;
+          newIds.push(mid);
+          var t = parseBankEmail(msg);
+          if (t) newRows.push([t.monthKey,t.id,t.date,t.type,t.category,t.item,t.amount,t.note,t.source]);
+        });
+      });
+    } catch(qErr) {}
+  });
+
+  if (newRows.length) {
+    ts.getRange(ts.getLastRow() + 1, 1, newRows.length, 9).setValues(newRows);
+  }
+
+  var allIds = procList.concat(newIds);
+  if (allIds.length > 1000) allIds = allIds.slice(-800);
+  props.setProperty('PROC_EMAILS', JSON.stringify(allIds));
+}
+
+function parseBankEmail(msg) {
+  try {
+    var body  = msg.getPlainBody();
+    var bodyL = body.toLowerCase();
+    var tz    = 'Asia/Kolkata';
+    var date  = msg.getDate();
+    var dateStr  = Utilities.formatDate(date, tz, 'yyyy-MM-dd');
+    var monthKey = Utilities.formatDate(date, tz, 'yyyy-MM');
+
+    var isDebit  = /\b(debit|debited|withdrawn|paid|spent)\b/.test(bodyL);
+    var isCredit = /\b(credit|credited|received|deposited)\b/.test(bodyL);
+    if (!isDebit && !isCredit) return null;
+
+    /* extract amount — try several common bank SMS / email patterns */
+    var amtPatterns = [
+      /(?:Rs\.?|INR|₹)\s*([0-9,]+\.?[0-9]*)/i,
+      /([0-9,]+\.?[0-9]*)\s*(?:Rs\.?|INR|₹)/i,
+      /amount[:\s]+(?:Rs\.?|INR|₹)?\s*([0-9,]+\.?[0-9]*)/i
+    ];
+    var amount = 0;
+    for (var pi = 0; pi < amtPatterns.length; pi++) {
+      var am = body.match(amtPatterns[pi]);
+      if (am) { amount = parseFloat(am[1].replace(/,/g,'')); break; }
+    }
+    if (!amount || amount <= 0) return null;
+
+    /* extract merchant name (best-effort) */
+    var merchant = '';
+    var mPatterns = [
+      /(?:at|merchant[:\s]+|paid to[:\s]+)([A-Za-z0-9 .&\-\/]+?)(?:\s+on\b|\s+via\b|\s+ref\b|\s+txn\b|\.|$)/i,
+      /(?:UPI to|transfer to)[:\s]+([A-Za-z0-9 .@\-]+?)(?:\s+on\b|\s+via\b|\s+ref\b|\.|$)/i
+    ];
+    for (var mi = 0; mi < mPatterns.length; mi++) {
+      var mm = body.match(mPatterns[mi]);
+      if (mm) { merchant = mm[1].trim(); break; }
+    }
+
+    var cat = autoCategorize(merchant.toLowerCase(), msg.getSubject().toLowerCase());
+    return {
+      id: 'bank_' + msg.getId(),
+      date: dateStr,
+      monthKey: monthKey,
+      type: isDebit ? 'expense' : 'income',
+      category: cat.c,
+      item: cat.i,
+      amount: amount,
+      note: merchant || 'Bank transaction',
+      source: 'bank'
+    };
+  } catch(e3) { return null; }
+}
+
+function autoCategorize(merchant, subj) {
+  var m = merchant + ' ' + subj;
+  var rules = [
+    { k:['zomato','swiggy','dunzo','box8','rebel foods'],          c:'Food',              i:'Food Delivery'             },
+    { k:['bigbasket','grofers','zepto','dmart','jiomart','blinkit'],c:'Food',              i:'Groceries'                 },
+    { k:['uber','ola ','rapido','meru '],                           c:'Transport',         i:'Taxi / Cab / Auto'         },
+    { k:['petrol','fuel','bpcl','iocl','hp pump','nayara','hpcl'], c:'Transport',         i:'Fuel / Gas'                },
+    { k:['fastag','toll ','nhai'],                                  c:'Transport',         i:'Toll & Fastag'             },
+    { k:['irctc','railway ticket','train ticket'],                  c:'Travel',            i:'Train / Bus Tickets'       },
+    { k:['makemytrip','goibibo','indigo','air india','vistara','spicejet','cleartrip'],
+                                                                    c:'Travel',            i:'Flight Tickets'            },
+    { k:['oyo ','treebo','hotel '],                                 c:'Travel',            i:'Hotel / Stay'              },
+    { k:['netflix','hotstar','disney','prime video'],               c:'Entertainment',     i:'Streaming (Netflix/Prime)' },
+    { k:['spotify','gaana','jiosaavn','wynk','apple music'],        c:'Entertainment',     i:'OTT / Music Apps'          },
+    { k:['medplus','apollo pharm','netmeds','1mg','pharmeasy'],     c:'Health',            i:'Pharmacy'                  },
+    { k:['doctor','hospital','clinic','fortis','max health'],       c:'Health',            i:'Doctor / Hospital'         },
+    { k:['gym','cult.fit','crossfit','fitness'],                    c:'Health',            i:'Gym'                       },
+    { k:['bescom','msedcl','tata power','adani elec','torrent pow'],c:'Housing',           i:'Electricity'               },
+    { k:['water bill','bwssb'],                                     c:'Housing',           i:'Water'                     },
+    { k:['airtel','jio ','vi recharge','bsnl'],                      c:'Technology',        i:'Mobile Recharge'           },
+    { k:['amazon','flipkart','myntra','ajio','meesho','snapdeal'],  c:'Misc',              i:'Gifts & Presents'          },
+    { k:['salary credit','payroll credit','ctc credit'],            c:'Employment',        i:'Salary'                    },
+    { k:['interest credit','fd interest','savings int'],            c:'Investments',       i:'Interest'                  },
+  ];
+  for (var ri = 0; ri < rules.length; ri++) {
+    for (var ki = 0; ki < rules[ri].k.length; ki++) {
+      if (m.indexOf(rules[ri].k[ki]) >= 0) return { c: rules[ri].c, i: rules[ri].i };
+    }
+  }
+  return { c: 'Misc', i: 'Unexpected / Emergency' };
 }`;
+
+/* Merchant keyword → category+item (for manual note auto-suggest & bank sync) */
+const MERCHANT_MAP = [
+  { keys: ['zomato', 'swiggy', 'dunzo', 'box8'],              cat: 'Food',              item: 'Food Delivery'             },
+  { keys: ['bigbasket', 'grofers', 'zepto', 'dmart', 'blinkit'], cat: 'Food',           item: 'Groceries'                 },
+  { keys: ['uber', 'ola', 'rapido', 'meru'],                   cat: 'Transport',         item: 'Taxi / Cab / Auto'         },
+  { keys: ['petrol', 'bpcl', 'iocl', 'hp pump', 'nayara'],    cat: 'Transport',         item: 'Fuel / Gas'                },
+  { keys: ['fastag', 'toll', 'nhai'],                          cat: 'Transport',         item: 'Toll & Fastag'             },
+  { keys: ['irctc', 'railway'],                                cat: 'Travel',            item: 'Train / Bus Tickets'       },
+  { keys: ['indigo', 'air india', 'vistara', 'makemytrip'],    cat: 'Travel',            item: 'Flight Tickets'            },
+  { keys: ['oyo', 'treebo', 'hotel'],                          cat: 'Travel',            item: 'Hotel / Stay'              },
+  { keys: ['netflix', 'hotstar', 'disney', 'prime video'],     cat: 'Entertainment',     item: 'Streaming (Netflix/Prime)' },
+  { keys: ['spotify', 'gaana', 'jiosaavn', 'wynk'],            cat: 'Entertainment',     item: 'OTT / Music Apps'          },
+  { keys: ['medplus', 'apollo pharm', 'netmeds', '1mg'],       cat: 'Health',            item: 'Pharmacy'                  },
+  { keys: ['doctor', 'hospital', 'clinic', 'fortis'],          cat: 'Health',            item: 'Doctor / Hospital'         },
+  { keys: ['gym', 'cult.fit', 'crossfit'],                     cat: 'Health',            item: 'Gym'                       },
+  { keys: ['bescom', 'msedcl', 'tata power', 'adani elec'],    cat: 'Housing',           item: 'Electricity'               },
+  { keys: ['airtel', 'jio', 'bsnl', 'vi recharge'],            cat: 'Technology',        item: 'Mobile Recharge'           },
+  { keys: ['amazon', 'flipkart', 'myntra', 'ajio', 'meesho'],  cat: 'Misc',              item: 'Gifts & Presents'          },
+  { keys: ['salary', 'payroll'],                               cat: 'Employment',        item: 'Salary'                    },
+  { keys: ['fd interest', 'savings interest'],                 cat: 'Investments',       item: 'Interest'                  },
+];
 
 const CURRENCIES = [
   { code: 'USD', label: '$ USD — US Dollar' },
@@ -256,7 +444,9 @@ const S = {
   year: new Date().getFullYear(),
   month: new Date().getMonth(),
   page: 'estimates',
-  data: {}
+  data: {},
+  txnFilter: 'all',
+  txnSearch: ''
 };
 
 /* ─── 3. PERSISTENCE ────────────────────────────────────── */
@@ -292,7 +482,8 @@ function getM(key) {
 function makeMonth() {
   return {
     estimates: { income: buildSec(DEF_INCOME), expenses: buildSec(DEF_EXPENSES) },
-    final: { income: buildSec(DEF_INCOME), expenses: buildSec(DEF_EXPENSES) }
+    final:     { income: buildSec(DEF_INCOME), expenses: buildSec(DEF_EXPENSES) },
+    transactions: []
   };
 }
 
@@ -343,8 +534,9 @@ function setPage(page) {
 }
 
 function render() {
-  if (S.page === 'estimates') renderBudget('estimates');
-  else if (S.page === 'final') renderBudget('final');
+  if (S.page === 'estimates')    renderBudget('estimates');
+  else if (S.page === 'final')   renderBudget('final');
+  else if (S.page === 'transactions') renderTransactions();
   else if (S.page === 'settings') renderSettings();
   else renderStats();
 }
@@ -356,6 +548,9 @@ function killCharts() { Object.values(AC).forEach(c => c?.destroy()); AC = {}; }
 function renderBudget(mode) {
   const d = getM(), sec = d[mode];
   const tI = secTotal(sec.income), tE = secTotal(sec.expenses), net = tI - tE;
+  const txns = getTxns();
+  const hasTxns = txns.length > 0;
+  const txMap = hasTxns ? txnSumMap(txns) : null;
 
   let h = `<div class="summary-banner">
     <div class="summary-item">
@@ -382,6 +577,13 @@ function renderBudget(mode) {
       </button>
     </div>`;
   } else {
+    if (hasTxns) {
+      h += `<div class="txn-banner">
+        <i class="fa-solid fa-receipt txn-banner-icon"></i>
+        <span class="txn-banner-text">Amounts auto-computed from <strong>${txns.length}</strong> transaction${txns.length !== 1 ? 's' : ''}</span>
+        <button class="txn-banner-link" data-a="go-txn">Manage →</button>
+      </div>`;
+    }
     h += `<div class="import-card">
       <div class="import-card-title">
         <i class="fa-solid fa-file-arrow-up"></i> Import Actual Data
@@ -411,7 +613,7 @@ function renderBudget(mode) {
     </div>
     <span class="section-badge badge-income">${fmt(tI)}</span>
   </div>`;
-  h += renderCats(sec.income, 'income', mode);
+  h += renderCats(sec.income, 'income', mode, txMap?.income || {});
   h += `<button class="btn-add-category" data-a="addcat" data-type="income" data-mode="${mode}">
     <i class="fa-solid fa-plus"></i> Add Income Category
   </button>`;
@@ -422,7 +624,7 @@ function renderBudget(mode) {
     </div>
     <span class="section-badge badge-expense">${fmt(tE)}</span>
   </div>`;
-  h += renderCats(sec.expenses, 'expenses', mode);
+  h += renderCats(sec.expenses, 'expenses', mode, txMap?.expenses || {});
   h += `<button class="btn-add-category" data-a="addcat" data-type="expenses" data-mode="${mode}">
     <i class="fa-solid fa-plus"></i> Add Expense Category
   </button>`;
@@ -453,11 +655,16 @@ function renderBudget(mode) {
   bindDrop();
 }
 
-function renderCats(section, type, mode) {
+function renderCats(section, type, mode, txCatMap = {}) {
   return Object.entries(section).map(([name, cat], idx) => {
     const total = catSum(cat), enc = encodeURIComponent(name), open = !cat.collapsed;
     const dotColor = CCOLORS[idx % CCOLORS.length];
+    const catTxItems = txCatMap[name] || {};  // { itemName -> txCount }
+
     const rows = cat.items.map(item => {
+      const txCount = catTxItems[item.name] ?? -1;
+      const fromTxn = mode === 'final' && txCount >= 0;
+
       let vc = '';
       if (mode === 'final') {
         const estCat = getM().estimates[type][name];
@@ -468,17 +675,26 @@ function renderCats(section, type, mode) {
           vc = `<span class="variance-chip ${cls}">${diff > 0 ? '+' : ''}${fmt(diff)}</span>`;
         }
       }
+
+      const amountField = fromTxn
+        ? `<div class="item-amount-txn">
+             ${fmt(item.amount)}
+             <span class="txn-count-badge">${txCount}</span>
+           </div>`
+        : `<input class="item-amount-input" type="number" value="${parseFloat(item.amount) || ''}" placeholder="0" min="0" step="0.01"
+             data-a="uamt" data-type="${type}" data-mode="${mode}" data-cat="${enc}" data-id="${item.id}">`;
+
       return `<div class="budget-row">
         <input class="item-name-input" type="text" value="${esc(item.name)}" placeholder="Item name"
-          data-a="uname" data-type="${type}" data-mode="${mode}" data-cat="${enc}" data-id="${item.id}">
+          data-a="uname" data-type="${type}" data-mode="${mode}" data-cat="${enc}" data-id="${item.id}"${fromTxn ? ' readonly style="color:var(--brand-600);font-weight:600"' : ''}>
         ${vc}
-        <input class="item-amount-input" type="number" value="${parseFloat(item.amount) || ''}" placeholder="0" min="0" step="0.01"
-          data-a="uamt" data-type="${type}" data-mode="${mode}" data-cat="${enc}" data-id="${item.id}">
+        ${amountField}
         <button class="item-delete-btn" data-a="ditem" data-type="${type}" data-mode="${mode}" data-cat="${enc}" data-id="${item.id}">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>`;
     }).join('');
+
     return `<div class="category-card">
       <div class="category-header" data-a="tcat" data-type="${type}" data-mode="${mode}" data-cat="${enc}">
         <span class="category-color-dot" style="background:${dotColor}"></span>
@@ -1204,7 +1420,8 @@ async function pushToSheets() {
   setSyncInd('spin');
   try {
     const resp = await fetch(url, {
-      method: 'POST', body: JSON.stringify({ rows: dataToRows(S.data) }),
+      method: 'POST',
+      body: JSON.stringify({ rows: dataToRows(S.data), transactions: allTxnsFlat() }),
       headers: { 'Content-Type': 'text/plain' }
     });
     const json = await resp.json();
@@ -1223,6 +1440,7 @@ async function pullFromSheets() {
     const json = await resp.json();
     if (json.ok) {
       S.data = rowsToData(json.rows);
+      if (json.txnRows && json.txnRows.length) txnsFromRows(json.txnRows);
       localStorage.setItem('budgetv3', JSON.stringify(S.data));
       setSyncInd('ok'); render();
       toast('Loaded from Google Sheets');
@@ -1612,7 +1830,309 @@ function toast(msg) {
   _tid = setTimeout(() => el.classList.remove('visible'), 2600);
 }
 
-/* ─── 16. EVENT LISTENERS ───────────────────────────────── */
+/* ─── 16. TRANSACTIONS ──────────────────────────────────── */
+
+function getTxns(key) {
+  const d = S.data[key || mkey()];
+  if (!d.transactions) d.transactions = [];
+  return d.transactions;
+}
+
+/* Returns { income: { cat: { item: count } }, expenses: { ... } }
+   Values are per-item transaction counts (used for readonly badges in Final tab) */
+function txnSumMap(txns) {
+  const m = { income: {}, expenses: {} };
+  txns.forEach(tx => {
+    const t = tx.type === 'income' ? 'income' : 'expenses';
+    if (!m[t][tx.category]) m[t][tx.category] = {};
+    m[t][tx.category][tx.item] = (m[t][tx.category][tx.item] || 0) + 1;
+  });
+  return m;
+}
+
+/* Recompute Final tab amounts from transaction totals for every matched item */
+function applyTxnsToFinal(key) {
+  const k = key || mkey();
+  const d = S.data[k]; if (!d) return;
+  const txns = getTxns(k); if (!txns.length) return;
+
+  const totals = { income: {}, expenses: {} };
+  txns.forEach(tx => {
+    const t = tx.type === 'income' ? 'income' : 'expenses';
+    if (!totals[t][tx.category]) totals[t][tx.category] = {};
+    totals[t][tx.category][tx.item] =
+      (totals[t][tx.category][tx.item] || 0) + (parseFloat(tx.amount) || 0);
+  });
+
+  ['income', 'expenses'].forEach(type => {
+    Object.entries(totals[type]).forEach(([cat, items]) => {
+      if (!d.final[type][cat])
+        d.final[type][cat] = { collapsed: false, items: [] };
+      Object.entries(items).forEach(([itemName, total]) => {
+        const ex = d.final[type][cat].items.find(i => i.name === itemName);
+        if (ex) ex.amount = total;
+        else d.final[type][cat].items.push({ id: uid(), name: itemName, amount: total });
+      });
+    });
+  });
+}
+
+function autoCategorizeMerchant(note) {
+  const m = (note || '').toLowerCase();
+  for (const rule of MERCHANT_MAP) {
+    if (rule.keys.some(k => m.includes(k))) return { cat: rule.cat, item: rule.item };
+  }
+  return { cat: 'Misc', item: 'Unexpected / Emergency' };
+}
+
+/* Collect all transactions across all months in a flat array for sync */
+function allTxnsFlat() {
+  const out = [];
+  Object.entries(S.data).forEach(([monthKey, d]) => {
+    (d.transactions || []).forEach(tx => out.push({ ...tx, monthKey }));
+  });
+  return out;
+}
+
+/* Reconstruct transactions from GAS rows: [MonthKey,ID,Date,Type,Cat,Item,Amt,Note,Source] */
+function txnsFromRows(rows) {
+  rows.forEach(r => {
+    const [monthKey, id, date, type, category, item, amount, note, source] = r.map(c => String(c ?? ''));
+    if (!monthKey || !id || !date || !type) return;
+    if (!S.data[monthKey]) S.data[monthKey] = makeMonth();
+    const d = S.data[monthKey];
+    if (!d.transactions) d.transactions = [];
+    if (!d.transactions.find(t => t.id === id)) {
+      d.transactions.push({
+        id, date, type, category, item,
+        amount: parseFloat(amount) || 0,
+        note: note || '', source: source || 'bank'
+      });
+    }
+  });
+  Object.keys(S.data).forEach(k => applyTxnsToFinal(k));
+}
+
+/* ── Render transactions tab ── */
+function renderTransactions() {
+  const key  = mkey();
+  const txns = getTxns(key);
+  const filter = S.txnFilter || 'all';
+  const search = (S.txnSearch || '').toLowerCase();
+
+  const totalIn  = txns.filter(t => t.type === 'income') .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+  const totalOut = txns.filter(t => t.type === 'expense').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+  const net = totalIn - totalOut;
+
+  let filtered = [...txns].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (filter === 'income')  filtered = filtered.filter(t => t.type === 'income');
+  if (filter === 'expense') filtered = filtered.filter(t => t.type === 'expense');
+  if (search) filtered = filtered.filter(t =>
+    (t.category || '').toLowerCase().includes(search) ||
+    (t.item     || '').toLowerCase().includes(search) ||
+    (t.note     || '').toLowerCase().includes(search)
+  );
+
+  const groups = {};
+  filtered.forEach(tx => { (groups[tx.date] = groups[tx.date] || []).push(tx); });
+
+  const today     = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  function dateLabel(d) {
+    if (d === today)     return 'Today';
+    if (d === yesterday) return 'Yesterday';
+    const [y, mo, day] = d.split('-');
+    return `${MONTHS[parseInt(mo) - 1].slice(0, 3)} ${parseInt(day)}, ${y}`;
+  }
+
+  let listHtml = '';
+  if (filtered.length === 0) {
+    listHtml = `<div class="empty-state" style="padding-top:32px">
+      <div class="empty-state-icon"><i class="fa-solid fa-receipt"></i></div>
+      <div class="empty-state-text">${
+        txns.length === 0
+          ? 'No transactions yet.<br>Tap <strong>+</strong> to log your first one.'
+          : 'No results match your filter.'
+      }</div>
+    </div>`;
+  } else {
+    Object.entries(groups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .forEach(([date, dayTxns]) => {
+        const dayIn  = dayTxns.filter(t => t.type === 'income') .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+        const dayOut = dayTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+        const dayNet = dayIn - dayOut;
+        listHtml += `<div class="txn-date-group">
+          <div class="txn-date-hdr">
+            <span class="txn-date-label">${dateLabel(date)}</span>
+            <span class="txn-date-net ${dayNet >= 0 ? 'positive' : 'negative'}">${fmt(dayNet, true)}</span>
+          </div>`;
+        dayTxns.forEach(tx => {
+          const isInc = tx.type === 'income';
+          const srcBadge = tx.source === 'bank'
+            ? `<span class="txn-src-badge"><i class="fa-solid fa-building-columns"></i> Bank</span>`
+            : '';
+          listHtml += `<div class="txn-item">
+            <div class="txn-icon ${isInc ? 'txn-icon-income' : 'txn-icon-expense'}">
+              <i class="fa-solid fa-${isInc ? 'arrow-trend-up' : 'arrow-trend-down'}"></i>
+            </div>
+            <div class="txn-body">
+              <div class="txn-name">${esc(tx.item)}</div>
+              <div class="txn-meta">${esc(tx.category)}${tx.note ? ' · ' + esc(tx.note) : ''}${srcBadge}</div>
+            </div>
+            <div class="txn-right">
+              <div class="txn-amount ${isInc ? 'positive' : 'negative'}">${isInc ? '+' : '-'}${fmt(tx.amount)}</div>
+              <button class="txn-del-btn" data-a="dtxn" data-id="${tx.id}">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>`;
+        });
+        listHtml += `</div>`;
+      });
+  }
+
+  document.getElementById('transactions-page').innerHTML = `
+    <div class="summary-banner">
+      <div class="summary-item">
+        <div class="summary-label">Received</div>
+        <div class="summary-value">${fmt(totalIn)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Spent</div>
+        <div class="summary-value">${fmt(totalOut)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Balance</div>
+        <div class="summary-value ${net >= 0 ? 'positive' : 'negative'}">${fmt(net, true)}</div>
+      </div>
+    </div>
+
+    <div class="txn-toolbar">
+      <div class="txn-filters">
+        <button class="txn-filter-btn ${filter === 'all'     ? 'active' : ''}" data-a="txf" data-f="all">All</button>
+        <button class="txn-filter-btn ${filter === 'expense' ? 'active' : ''}" data-a="txf" data-f="expense">
+          <i class="fa-solid fa-arrow-trend-down"></i> Expense
+        </button>
+        <button class="txn-filter-btn ${filter === 'income'  ? 'active' : ''}" data-a="txf" data-f="income">
+          <i class="fa-solid fa-arrow-trend-up"></i> Income
+        </button>
+      </div>
+      <input class="txn-search" type="search" placeholder="Search category, item, note…"
+             value="${esc(S.txnSearch || '')}" data-a="txs" autocomplete="off">
+    </div>
+
+    <div class="txn-list">${listHtml}</div>
+
+    <button class="txn-fab" data-a="atxn" title="Add transaction">
+      <i class="fa-solid fa-plus"></i>
+    </button>`;
+}
+
+/* ── Transaction modal ── */
+let _txnCtx = null;
+
+function openTxnSheet(editId) {
+  _txnCtx = { editId: editId || null, type: 'expense' };
+  const today = new Date().toISOString().slice(0, 10);
+
+  document.getElementById('txn-modal-heading').textContent = editId ? 'Edit Transaction' : 'Add Transaction';
+  document.getElementById('txn-date').value   = today;
+  document.getElementById('txn-amount').value = '';
+  document.getElementById('txn-note').value   = '';
+
+  if (editId) {
+    const tx = getTxns().find(t => t.id === editId);
+    if (tx) {
+      _txnCtx.type = tx.type;
+      document.getElementById('txn-date').value   = tx.date;
+      document.getElementById('txn-amount').value = tx.amount;
+      document.getElementById('txn-note').value   = tx.note || '';
+    }
+  }
+
+  document.querySelectorAll('.txn-type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.t === _txnCtx.type));
+
+  const existing = editId ? getTxns().find(t => t.id === editId) : null;
+  updateTxnCatDropdown(existing);
+
+  document.getElementById('txn-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('txn-amount').focus(), 80);
+}
+
+function closeTxnSheet() {
+  document.getElementById('txn-modal').style.display = 'none';
+  _txnCtx = null;
+}
+
+function updateTxnCatDropdown(existing) {
+  const type = _txnCtx?.type || 'expense';
+  const defs = type === 'income' ? DEF_INCOME : DEF_EXPENSES;
+  const catSel = document.getElementById('txn-cat');
+  catSel.innerHTML = defs.map(d => `<option value="${esc(d.name)}">${esc(d.name)}</option>`).join('');
+  if (existing?.category) {
+    const opt = [...catSel.options].find(o => o.value === existing.category);
+    if (opt) catSel.value = existing.category;
+  }
+  updateTxnItemDropdown(existing);
+}
+
+function updateTxnItemDropdown(existing) {
+  const type    = _txnCtx?.type || 'expense';
+  const defs    = type === 'income' ? DEF_INCOME : DEF_EXPENSES;
+  const catSel  = document.getElementById('txn-cat');
+  const itemSel = document.getElementById('txn-item');
+  const catDef  = defs.find(d => d.name === catSel.value);
+  itemSel.innerHTML = catDef
+    ? catDef.items.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('')
+    : '<option value="Other">Other</option>';
+  if (existing?.item) {
+    const opt = [...itemSel.options].find(o => o.value === existing.item);
+    if (opt) itemSel.value = existing.item;
+  }
+}
+
+function saveTxnSheet() {
+  const dateVal = document.getElementById('txn-date').value;
+  const amtVal  = parseFloat(document.getElementById('txn-amount').value) || 0;
+  const catVal  = document.getElementById('txn-cat').value;
+  const itemVal = document.getElementById('txn-item').value;
+  const noteVal = document.getElementById('txn-note').value.trim();
+
+  if (!dateVal)         { toast('Please select a date');              return; }
+  if (!amtVal)          { toast('Please enter an amount');            return; }
+  if (!catVal || !itemVal) { toast('Please select category & item'); return; }
+
+  const k = mkey(), txns = getTxns(k);
+
+  if (_txnCtx?.editId) {
+    const tx = txns.find(t => t.id === _txnCtx.editId);
+    if (tx) Object.assign(tx, {
+      date: dateVal, type: _txnCtx.type,
+      category: catVal, item: itemVal, amount: amtVal, note: noteVal
+    });
+  } else {
+    txns.push({
+      id: uid(), date: dateVal, type: _txnCtx?.type || 'expense',
+      category: catVal, item: itemVal, amount: amtVal, note: noteVal, source: 'manual'
+    });
+  }
+
+  applyTxnsToFinal(k);
+  save(); closeTxnSheet(); render();
+  toast(_txnCtx ? 'Transaction updated' : 'Transaction added');
+}
+
+function deleteTxn(id) {
+  const k = mkey(), d = S.data[k]; if (!d) return;
+  d.transactions = (d.transactions || []).filter(t => t.id !== id);
+  applyTxnsToFinal(k);
+  save(); render();
+  toast('Transaction deleted');
+}
+
+/* ─── 17. EVENT LISTENERS ───────────────────────────────── */
 
 /* Main content — click delegation */
 document.getElementById('main-content').addEventListener('click', e => {
@@ -1639,15 +2159,21 @@ document.getElementById('main-content').addEventListener('click', e => {
   else if (a === 'copy-script') copyScript();
   else if (a === 'export-all') exportAllCSV();
   else if (a === 'clear-all') clearAllData();
+  /* ── Transactions ── */
+  else if (a === 'atxn')   openTxnSheet();
+  else if (a === 'dtxn')   { if (confirm('Delete this transaction?')) deleteTxn(id); }
+  else if (a === 'txf')    { S.txnFilter = t.dataset.f; renderTransactions(); }
+  else if (a === 'go-txn') { killCharts(); setPage('transactions'); }
 });
 
 /* Main content — input delegation */
 document.getElementById('main-content').addEventListener('input', e => {
   const t = e.target; if (!t.dataset.a) return;
   const { a, type, mode, cat, id } = t.dataset;
-  const catName = decodeURIComponent(cat);
-  if (a === 'uamt') { mutItem(type, mode, catName, id, item => { item.amount = parseFloat(t.value) || 0; }); updTotals(mode); }
+  const catName = cat ? decodeURIComponent(cat) : '';
+  if (a === 'uamt')  { mutItem(type, mode, catName, id, item => { item.amount = parseFloat(t.value) || 0; }); updTotals(mode); }
   if (a === 'uname') mutItem(type, mode, catName, id, item => { item.name = t.value; });
+  if (a === 'txs')   { S.txnSearch = t.value; renderTransactions(); }
 });
 
 /* Main content — change delegation */
@@ -1692,7 +2218,43 @@ document.getElementById('tab-bar').addEventListener('click', e => {
 /* Sync button */
 document.getElementById('sync-btn').addEventListener('click', pushToSheets);
 
-/* ─── 17. BOOT ──────────────────────────────────────────── */
+/* ── Transaction modal event listeners ── */
+document.getElementById('txn-cancel').addEventListener('click', closeTxnSheet);
+document.getElementById('txn-save').addEventListener('click', saveTxnSheet);
+
+/* Close when tapping the backdrop */
+document.getElementById('txn-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeTxnSheet();
+});
+
+/* Type toggle (Expense / Income) */
+document.getElementById('txn-modal').addEventListener('click', e => {
+  const btn = e.target.closest('.txn-type-btn'); if (!btn || !_txnCtx) return;
+  _txnCtx.type = btn.dataset.t;
+  document.querySelectorAll('.txn-type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.t === _txnCtx.type));
+  updateTxnCatDropdown();
+});
+
+/* Re-populate items when category changes */
+document.getElementById('txn-cat').addEventListener('change', () => updateTxnItemDropdown());
+
+/* Auto-fill category+item from note text */
+document.getElementById('txn-note').addEventListener('input', e => {
+  if (!_txnCtx || _txnCtx.editId) return;
+  const guess = autoCategorizeMerchant(e.target.value);
+  const catSel  = document.getElementById('txn-cat');
+  const itemSel = document.getElementById('txn-item');
+  const catOpt  = [...catSel.options].find(o => o.value === guess.cat);
+  if (catOpt) {
+    catSel.value = guess.cat;
+    updateTxnItemDropdown();
+    const itemOpt = [...itemSel.options].find(o => o.value === guess.item);
+    if (itemOpt) itemSel.value = guess.item;
+  }
+});
+
+/* ─── 18. BOOT ──────────────────────────────────────────── */
 loadAll();
 updHeader();
 render();
