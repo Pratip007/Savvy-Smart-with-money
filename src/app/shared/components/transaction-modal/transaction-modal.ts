@@ -107,7 +107,27 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
               {{ i }}
             </button>
           }
+          @if (!showAddItem()) {
+            <button class="at-item-chip at-item-chip-add" (click)="showAddItem.set(true)">
+              ➕ New item
+            </button>
+          }
         </div>
+
+        <!-- Inline add-item input -->
+        @if (showAddItem()) {
+          <div class="at-add-cat-row">
+            <input class="at-add-cat-input" type="text" [(ngModel)]="newItemName"
+                   placeholder="Item name…" maxlength="40"
+                   (keyup.enter)="confirmAddItem()">
+            <button class="at-add-cat-ok" (click)="confirmAddItem()">
+              <i class="fa-solid fa-check"></i>
+            </button>
+            <button class="at-add-cat-cancel" (click)="showAddItem.set(false); newItemName=''">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        }
 
         <!-- Note -->
         <p class="at-label">Note <span class="at-label-opt">(optional)</span></p>
@@ -151,17 +171,19 @@ export class TransactionModalComponent {
   readonly editId       = signal<string | null>(null);
   readonly txType       = signal<'income' | 'expense'>('expense');
   readonly autoDetected = signal(false);
-  readonly showAddCat   = signal(false);
+  readonly showAddCat  = signal(false);
+  readonly showAddItem = signal(false);
 
   // category & item are signals so computed(currentItems) reacts to changes
   readonly category = signal('');
   readonly item     = signal('');
 
-  date       = todayDate();
-  time       = nowTime();
-  amount     = '';
-  note       = '';
-  newCatName = '';
+  date        = todayDate();
+  time        = nowTime();
+  amount      = '';
+  note        = '';
+  newCatName  = '';
+  newItemName = '';
 
   save      = output<Partial<Transaction> & { editId: string | null }>();
   cancelled = output<void>();
@@ -207,7 +229,9 @@ export class TransactionModalComponent {
     this.note   = tx?.note ?? '';
     this.autoDetected.set(false);
     this.showAddCat.set(false);
-    this.newCatName = '';
+    this.showAddItem.set(false);
+    this.newCatName  = '';
+    this.newItemName = '';
     const defs = this.currentDefs();
     this.category.set(tx?.category ?? defs[0]?.name ?? '');
     this.item.set(tx?.item ?? (this.currentItems()[0] ?? 'Other'));
@@ -255,7 +279,8 @@ export class TransactionModalComponent {
 
   setCategory(name: string): void {
     this.category.set(name);
-    // currentItems recomputes automatically; pick first item of new category
+    this.showAddItem.set(false);
+    this.newItemName = '';
     const def = this.currentDefs().find(d => d.name === name);
     this.item.set(def?.items[0] ?? 'Other');
   }
@@ -269,6 +294,16 @@ export class TransactionModalComponent {
     this.item.set('Other');
     this.newCatName = '';
     this.showAddCat.set(false);
+  }
+
+  confirmAddItem(): void {
+    const name = this.newItemName.trim();
+    if (!name) return;
+    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
+    this.budgetState.addNamedItem(secKey, 'estimates', this.category(), name);
+    this.item.set(name);
+    this.newItemName = '';
+    this.showAddItem.set(false);
   }
 
   onNoteInput(e: Event): void {

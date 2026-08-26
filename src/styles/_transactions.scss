@@ -863,6 +863,13 @@
   cursor: pointer;
   transition: all 0.15s ease;
 }
+.at-item-chip-add {
+  border-style: dashed;
+  border-color: var(--brand-300, var(--brand-400));
+  color: var(--brand-600);
+  background: var(--brand-50, #eff6ff);
+}
+
 .at-item-chip.active {
   background: var(--brand-600);
   border-color: var(--brand-600);
