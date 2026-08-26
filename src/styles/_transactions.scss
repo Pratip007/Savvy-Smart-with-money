@@ -812,7 +812,7 @@
 .at-cat-grid--scroll {
   grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 2 * 5px) / 3.3);
+  grid-auto-columns: calc((100% - 3 * 5px) / 4);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -1091,17 +1091,6 @@
 }
 .at-action-continue:hover { filter: brightness(0.96); }
 
-/* ── Item chips base (always 3-row horizontal scroll) ── */
-.at-item-chips {
-  display: grid;
-  grid-template-rows: repeat(3, auto);
-  grid-auto-flow: column;
-  grid-auto-columns: max-content;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-.at-item-chips::-webkit-scrollbar { display: none; }
 
 /* ── Label row: label + Edit/Done toggle ── */
 .at-label-row {

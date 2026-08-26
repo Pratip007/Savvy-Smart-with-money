@@ -112,7 +112,9 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
 
         <!-- Item -->
         <p class="at-label">Item</p>
-        <div class="at-item-chips">
+        <div class="at-item-chips"
+             [class.at-item-chips--fill]="!itemScrollMode()"
+             [class.at-item-chips--scroll]="itemScrollMode()">
           @for (i of currentItems(); track i) {
             <button class="at-item-chip" [class.active]="item()===i" (click)="item.set(i)">
               {{ i }}
@@ -125,7 +127,9 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           }
         </div>
 
-        <p class="at-scroll-hint"><i class="fa-solid fa-arrow-right-long"></i> scroll for more</p>
+        @if (itemScrollMode()) {
+          <p class="at-scroll-hint"><i class="fa-solid fa-arrow-right-long"></i> scroll for more</p>
+        }
 
         <!-- Inline add-item input -->
         @if (showAddItem()) {
@@ -226,7 +230,8 @@ export class TransactionModalComponent {
     return list.length ? list : ['Other'];
   });
 
-  catScrollMode = computed(() => this.currentDefs().length + 1 > 12);
+  catScrollMode  = computed(() => this.currentDefs().length + 1 > 12);
+  itemScrollMode = computed(() => this.currentItems().length + 1 > 9);
 
   catIcon(name: string): string { return CAT_ICONS[name] ?? '📂'; }
 
