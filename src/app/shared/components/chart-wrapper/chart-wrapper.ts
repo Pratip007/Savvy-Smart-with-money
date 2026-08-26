@@ -7,7 +7,7 @@ Chart.register(...registerables);
   selector: 'app-chart-wrapper',
   standalone: true,
   template: `<canvas #canvas></canvas>`,
-  styles: [`canvas { width: 100% !important; }`]
+  styles: [`:host { display: block; width: 100%; height: 100%; } canvas { width: 100% !important; height: 100% !important; display: block; }`]
 })
 export class ChartWrapperComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
