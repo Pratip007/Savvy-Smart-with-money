@@ -802,7 +802,7 @@
 
 /* Fill mode: few items — equal columns, full width, auto height (tallest tile sets row) */
 .at-cat-grid--fill {
-  grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   grid-auto-rows: auto;
   max-height: calc(3 * 58px + 2 * 5px);
   overflow: hidden;
@@ -812,7 +812,7 @@
 .at-cat-grid--scroll {
   grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 3 * 5px) / 4);
+  grid-auto-columns: calc((100% - 4 * 5px) / 5);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
