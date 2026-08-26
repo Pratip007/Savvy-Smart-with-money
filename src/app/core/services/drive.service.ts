@@ -99,8 +99,7 @@ export class DriveService {
     const list = await this.get(`${DRIVE_API}/files?q=${q}&fields=files(id)&pageSize=1`, token);
     if (list.files?.length > 0) return list.files[0].id;
 
-    // Create spreadsheet with 3 sheets: two internal data sheets + one always-visible
-    // "Overview" sheet. Google forbids hiding ALL sheets, so Overview acts as the anchor.
+    // Create spreadsheet — all sheets visible, no hiding needed.
     const created = await this.fetchWithRetry('Create spreadsheet', () =>
       fetch(SHEETS_API, {
         method: 'POST',
@@ -110,7 +109,6 @@ export class DriveService {
           sheets: [
             { properties: { title: '_Data' } },
             { properties: { title: '_Transactions' } },
-            { properties: { title: 'Overview' } },
           ],
         }),
       })
@@ -118,16 +116,6 @@ export class DriveService {
     if (!created.ok) throw new Error(`Create spreadsheet ${created.status}: ${await created.text()}`);
     const file = await created.json();
     const fileId: string = file.spreadsheetId;
-
-    // Hide the two internal sheets; Overview stays visible so the batch succeeds.
-    const dataSheetId = file.sheets[0].properties.sheetId;
-    const txnSheetId  = file.sheets[1].properties.sheetId;
-    await this.sheetsPost(fileId, token, {
-      requests: [
-        { updateSheetProperties: { properties: { sheetId: dataSheetId, hidden: true }, fields: 'hidden' } },
-        { updateSheetProperties: { properties: { sheetId: txnSheetId,  hidden: true }, fields: 'hidden' } },
-      ],
-    });
 
     // Move into the Savvy folder
     await this.fetchWithRetry('Move file', () =>

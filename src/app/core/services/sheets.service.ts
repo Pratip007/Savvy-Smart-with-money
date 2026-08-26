@@ -326,152 +326,220 @@ export class SheetsService {
   private buildMonthSheet(
     data: MonthData, mk: string, sheetId: number, label: string
   ): { values: any[][], requests: any[] } {
-    const sym  = this.storage.getCurrency() === 'INR' ? '₹' : this.storage.getCurrency();
-    const fmt  = (n: number) => `${sym}${Math.abs(n).toLocaleString('en-IN')}`;
-    const diff = (n: number) => (n >= 0 ? '+' : '−') + fmt(Math.abs(n));
-    const COLS = 6;
+    const sym   = this.storage.getCurrency() === 'INR' ? '₹' : this.storage.getCurrency();
+    const fmt   = (n: number) => `${sym}${Math.abs(n).toLocaleString('en-IN')}`;
+    const dStr  = (n: number) => (n >= 0 ? '+' : '−') + fmt(Math.abs(n));
+    const COLS  = 6;
 
     const values: any[][] = [];
-    const req: any[] = [];
-
-    // ── Helpers (closures over `values`, `req`, `sheetId`) ────────────────────
-    const ri = () => values.length - 1; // 0-based index of last pushed row
+    const req: any[]      = [];
+    const ri  = () => values.length - 1;
+    const row = (...cells: any[]) => { values.push(cells); return ri(); };
 
     const merge = (r0: number, r1: number, c0 = 0, c1 = COLS) =>
       req.push({ mergeCells: { range: { sheetId, startRowIndex: r0, endRowIndex: r1, startColumnIndex: c0, endColumnIndex: c1 }, mergeType: 'MERGE_ALL' } });
-
     const style = (r0: number, r1: number, c0: number, c1: number, f: any) =>
       req.push({ repeatCell: { range: { sheetId, startRowIndex: r0, endRowIndex: r1, startColumnIndex: c0, endColumnIndex: c1 }, cell: { userEnteredFormat: f }, fields: 'userEnteredFormat' } });
-
-    const colW = (c0: number, c1: number, px: number) =>
+    const colW  = (c0: number, c1: number, px: number) =>
       req.push({ updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: c0, endIndex: c1 }, properties: { pixelSize: px }, fields: 'pixelSize' } });
-
-    const rowH = (r0: number, r1: number, px: number) =>
+    const rowH  = (r0: number, r1: number, px: number) =>
       req.push({ updateDimensionProperties: { range: { sheetId, dimension: 'ROWS', startIndex: r0, endIndex: r1 }, properties: { pixelSize: px }, fields: 'pixelSize' } });
 
-    // ── Totals ─────────────────────────────────────────────────────────────────
+    const secHeader = (text: string, bg: any, fg = C.white) => {
+      const r = row(text, '', '', '', '', '');
+      merge(r, r + 1); rowH(r, r + 1, 36);
+      style(r, r + 1, 0, COLS, { backgroundColor: bg, textFormat: { foregroundColor: fg, bold: true, fontSize: 11 }, horizontalAlignment: 'LEFT', verticalAlignment: 'MIDDLE' });
+      return r;
+    };
+    const colHeader = (...labels: string[]) => {
+      const r = row(...labels);
+      style(r, r + 1, 0, COLS, { backgroundColor: C.headerBg, textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
+      return r;
+    };
+    const gap = (h = 12) => { const r = row('', '', '', '', '', ''); rowH(r, r + 1, h); };
+
+    // ── Totals ────────────────────────────────────────────────────────────────
     let estInc = 0, estExp = 0, actInc = 0, actExp = 0;
     Object.values(data.estimates.income).forEach(c => c.items.forEach(i => estInc += i.amount));
     Object.values(data.estimates.expenses).forEach(c => c.items.forEach(i => estExp += i.amount));
     Object.values(data.final.income).forEach(c => c.items.forEach(i => actInc += i.amount));
     Object.values(data.final.expenses).forEach(c => c.items.forEach(i => actExp += i.amount));
-    const balance = actInc - actExp;
+    const balance     = actInc - actExp;
+    const savingsRate = actInc > 0 ? Math.round((balance / actInc) * 100) : 0;
 
-    // ── Row 0: Main title ──────────────────────────────────────────────────────
-    values.push([`SAVVY BUDGET — ${label.toUpperCase()}`]);
-    merge(0, 1);
-    style(0, 1, 0, COLS, { backgroundColor: C.darkBlue, textFormat: { foregroundColor: C.white, bold: true, fontSize: 14 }, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE' });
-    rowH(0, 1, 44);
+    // ═══════════════════════════════════════════════════════
+    // 1. TITLE
+    // ═══════════════════════════════════════════════════════
+    const titleR = row(`SAVVY BUDGET — ${label.toUpperCase()}`, '', '', '', '', '');
+    merge(titleR, titleR + 1); rowH(titleR, titleR + 1, 48);
+    style(titleR, titleR + 1, 0, COLS, { backgroundColor: C.darkBlue, textFormat: { foregroundColor: C.white, bold: true, fontSize: 14 }, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE' });
 
-    // ── Row 1: empty ──────────────────────────────────────────────────────────
-    values.push([]);
+    // ═══════════════════════════════════════════════════════
+    // 2. SNAPSHOT SUMMARY
+    // ═══════════════════════════════════════════════════════
+    gap(8);
+    const s1 = row('INCOME', fmt(estInc) + ' est', fmt(actInc) + ' actual', 'EXPENSES', fmt(estExp) + ' est', fmt(actExp) + ' actual');
+    style(s1, s1 + 1, 0, 3, { backgroundColor: C.lightGreen, textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
+    style(s1, s1 + 1, 3, 6, { backgroundColor: C.lightRed,   textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
+    rowH(s1, s1 + 1, 30);
 
-    // ── Row 2: Summary bar ────────────────────────────────────────────────────
-    values.push(['Total Income', fmt(actInc), 'Total Expenses', fmt(actExp), 'Balance', fmt(balance)]);
-    const sr = ri();
-    style(sr, sr+1, 0, 2, { backgroundColor: C.lightGreen, textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
-    style(sr, sr+1, 2, 4, { backgroundColor: C.lightRed,   textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
-    style(sr, sr+1, 4, 6, { backgroundColor: C.lightBlue,  textFormat: { bold: true, foregroundColor: balance >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'CENTER' });
-    rowH(sr, sr+1, 32);
+    const s2 = row('NET BALANCE', fmt(balance), '', 'SAVINGS RATE', `${savingsRate >= 0 ? '+' : ''}${savingsRate}%`, '');
+    merge(s2, s2 + 1, 1, 3); merge(s2, s2 + 1, 4, 6);
+    style(s2, s2 + 1, 0, 3, { backgroundColor: C.lightBlue, textFormat: { bold: true, foregroundColor: balance >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'CENTER' });
+    style(s2, s2 + 1, 3, 6, { backgroundColor: C.altRow,    textFormat: { bold: true, foregroundColor: savingsRate >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'CENTER' });
+    rowH(s2, s2 + 1, 28);
+    gap(16);
 
-    // ── Row 3: empty ──────────────────────────────────────────────────────────
-    values.push([]);
+    // ═══════════════════════════════════════════════════════
+    // 3. ESTIMATES — BUDGET PLAN
+    // ═══════════════════════════════════════════════════════
+    secHeader('📋   BUDGET ESTIMATES', C.darkBlue);
+    colHeader('Category', 'Item', 'Planned Amount', '', '', '');
 
-    // ── Row 4: Budget section header ──────────────────────────────────────────
-    values.push(['BUDGET PLAN']);
-    const bhr = ri();
-    merge(bhr, bhr+1);
-    style(bhr, bhr+1, 0, COLS, { backgroundColor: C.lightBlue, textFormat: { bold: true, fontSize: 11 }, horizontalAlignment: 'CENTER' });
-    rowH(bhr, bhr+1, 30);
+    // Income
+    const eiSub = row('▲ INCOME', '', '', '', '', '');
+    merge(eiSub, eiSub + 1);
+    style(eiSub, eiSub + 1, 0, COLS, { backgroundColor: C.lightGreen, textFormat: { bold: true, foregroundColor: C.greenText } });
 
-    // ── Row 5: Column headers ─────────────────────────────────────────────────
-    values.push(['Category', 'Item', 'Type', 'Budgeted', 'Actual', 'Difference']);
-    style(ri(), ri()+1, 0, COLS, { backgroundColor: C.headerBg, textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
+    let incEstTot = 0;
+    Object.entries(data.estimates.income).forEach(([cat, cd]) =>
+      cd.items.forEach(item => {
+        incEstTot += item.amount;
+        const r = row(cat, item.name, item.amount > 0 ? fmt(item.amount) : '—', '', '', '');
+        style(r, r + 1, 0, COLS, { backgroundColor: C.incomeRow });
+        style(r, r + 1, 2, 3, { horizontalAlignment: 'RIGHT' });
+      })
+    );
+    if (!Object.keys(data.estimates.income).length) {
+      const r = row('', 'No income budgeted yet', '', '', '', '');
+      style(r, r + 1, 0, COLS, { backgroundColor: C.incomeRow, textFormat: { italic: true } });
+    }
+    const eiTotR = row('INCOME TOTAL', '', fmt(incEstTot), '', '', '');
+    style(eiTotR, eiTotR + 1, 0, COLS, { backgroundColor: C.subtotal, textFormat: { bold: true } });
+    style(eiTotR, eiTotR + 1, 2, 3, { textFormat: { bold: true }, horizontalAlignment: 'RIGHT' });
 
-    // ── INCOME sub-header ─────────────────────────────────────────────────────
-    values.push(['▲ INCOME']);
-    const iLabelRow = ri();
-    merge(iLabelRow, iLabelRow+1);
-    style(iLabelRow, iLabelRow+1, 0, COLS, { backgroundColor: C.lightGreen, textFormat: { bold: true, foregroundColor: C.greenText } });
+    gap();
 
-    let incEstTot = 0, incActTot = 0;
-    Object.entries(data.estimates.income).forEach(([cat, catData]) => {
-      catData.items.forEach(item => {
-        const act  = data.final.income[cat]?.items.find(i => i.name === item.name)?.amount ?? 0;
-        const d    = act - item.amount;
-        incEstTot += item.amount; incActTot += act;
-        values.push([cat, item.name, 'Income', fmt(item.amount), fmt(act), diff(d)]);
-        const r = ri();
-        style(r, r+1, 0, COLS, { backgroundColor: C.incomeRow });
-        style(r, r+1, 5, 6, { textFormat: { foregroundColor: d >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'RIGHT' });
-        style(r, r+1, 3, 6, { horizontalAlignment: 'RIGHT' });
+    // Expenses
+    const eeSub = row('▼ EXPENSES', '', '', '', '', '');
+    merge(eeSub, eeSub + 1);
+    style(eeSub, eeSub + 1, 0, COLS, { backgroundColor: C.lightRed, textFormat: { bold: true, foregroundColor: C.redText } });
+
+    let expEstTot = 0;
+    Object.entries(data.estimates.expenses).forEach(([cat, cd]) =>
+      cd.items.forEach(item => {
+        expEstTot += item.amount;
+        const r = row(cat, item.name, item.amount > 0 ? fmt(item.amount) : '—', '', '', '');
+        style(r, r + 1, 0, COLS, { backgroundColor: C.expenseRow });
+        style(r, r + 1, 2, 3, { horizontalAlignment: 'RIGHT' });
+      })
+    );
+    if (!Object.keys(data.estimates.expenses).length) {
+      const r = row('', 'No expenses budgeted yet', '', '', '', '');
+      style(r, r + 1, 0, COLS, { backgroundColor: C.expenseRow, textFormat: { italic: true } });
+    }
+    const eeTotR = row('EXPENSES TOTAL', '', fmt(expEstTot), '', '', '');
+    style(eeTotR, eeTotR + 1, 0, COLS, { backgroundColor: C.subtotal, textFormat: { bold: true } });
+    style(eeTotR, eeTotR + 1, 2, 3, { textFormat: { bold: true }, horizontalAlignment: 'RIGHT' });
+    gap(16);
+
+    // ═══════════════════════════════════════════════════════
+    // 4. ACTUAL SPENDING — FINAL vs ESTIMATES
+    // ═══════════════════════════════════════════════════════
+    secHeader('✅   ACTUAL SPENDING', { red: 0.063, green: 0.478, blue: 0.282 });
+    colHeader('Category', 'Item', 'Budgeted', 'Actual', 'Difference', '');
+
+    // Actual Income
+    const aiSub = row('▲ INCOME', '', '', '', '', '');
+    merge(aiSub, aiSub + 1);
+    style(aiSub, aiSub + 1, 0, COLS, { backgroundColor: C.lightGreen, textFormat: { bold: true, foregroundColor: C.greenText } });
+
+    let incActTot = 0, incEstTot2 = 0;
+    const allIncCats = new Set([...Object.keys(data.estimates.income), ...Object.keys(data.final.income)]);
+    let hasAI = false;
+    allIncCats.forEach(cat => {
+      const estItems = data.estimates.income[cat]?.items ?? [];
+      const actItems = data.final.income[cat]?.items ?? [];
+      const names = new Set([...estItems.map(i => i.name), ...actItems.map(i => i.name)]);
+      names.forEach(name => {
+        hasAI = true;
+        const est = estItems.find(i => i.name === name)?.amount ?? 0;
+        const act = actItems.find(i => i.name === name)?.amount ?? 0;
+        incEstTot2 += est; incActTot += act;
+        const d = act - est;
+        const r = row(cat, name, est > 0 ? fmt(est) : '—', act > 0 ? fmt(act) : '—', dStr(d), '');
+        style(r, r + 1, 0, COLS, { backgroundColor: C.incomeRow });
+        style(r, r + 1, 2, 5, { horizontalAlignment: 'RIGHT' });
+        style(r, r + 1, 4, 5, { textFormat: { foregroundColor: d >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'RIGHT' });
       });
     });
+    if (!hasAI) {
+      const r = row('', 'No income recorded yet', '', '', '', '');
+      style(r, r + 1, 0, COLS, { backgroundColor: C.incomeRow, textFormat: { italic: true } });
+    }
+    const aiTotR = row('INCOME TOTAL', '', fmt(incEstTot2), fmt(incActTot), dStr(incActTot - incEstTot2), '');
+    style(aiTotR, aiTotR + 1, 0, COLS, { backgroundColor: C.subtotal, textFormat: { bold: true } });
+    style(aiTotR, aiTotR + 1, 2, 5, { textFormat: { bold: true }, horizontalAlignment: 'RIGHT' });
+    style(aiTotR, aiTotR + 1, 4, 5, { textFormat: { bold: true, foregroundColor: (incActTot - incEstTot2) >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'RIGHT' });
 
-    // Income subtotal
-    values.push(['INCOME TOTAL', '', '', fmt(incEstTot), fmt(incActTot), diff(incActTot - incEstTot)]);
-    const irs = ri();
-    style(irs, irs+1, 0, COLS, { backgroundColor: C.subtotal, textFormat: { bold: true } });
-    style(irs, irs+1, 3, 6, { backgroundColor: C.subtotal, textFormat: { bold: true }, horizontalAlignment: 'RIGHT' });
+    gap();
 
-    // ── Empty separator ────────────────────────────────────────────────────────
-    values.push([]);
+    // Actual Expenses
+    const aeSub = row('▼ EXPENSES', '', '', '', '', '');
+    merge(aeSub, aeSub + 1);
+    style(aeSub, aeSub + 1, 0, COLS, { backgroundColor: C.lightRed, textFormat: { bold: true, foregroundColor: C.redText } });
 
-    // ── EXPENSES sub-header ───────────────────────────────────────────────────
-    values.push(['▼ EXPENSES']);
-    const eLabelRow = ri();
-    merge(eLabelRow, eLabelRow+1);
-    style(eLabelRow, eLabelRow+1, 0, COLS, { backgroundColor: C.lightRed, textFormat: { bold: true, foregroundColor: C.redText } });
-
-    let expEstTot = 0, expActTot = 0;
-    Object.entries(data.estimates.expenses).forEach(([cat, catData]) => {
-      catData.items.forEach(item => {
-        const act  = data.final.expenses[cat]?.items.find(i => i.name === item.name)?.amount ?? 0;
-        const d    = item.amount - act;  // positive = saved money
-        expEstTot += item.amount; expActTot += act;
-        values.push([cat, item.name, 'Expense', fmt(item.amount), fmt(act), diff(d)]);
-        const r = ri();
-        style(r, r+1, 0, COLS, { backgroundColor: C.expenseRow });
-        style(r, r+1, 5, 6, { textFormat: { foregroundColor: d >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'RIGHT' });
-        style(r, r+1, 3, 6, { horizontalAlignment: 'RIGHT' });
+    let expActTot = 0, expEstTot2 = 0;
+    const allExpCats = new Set([...Object.keys(data.estimates.expenses), ...Object.keys(data.final.expenses)]);
+    let hasAE = false;
+    allExpCats.forEach(cat => {
+      const estItems = data.estimates.expenses[cat]?.items ?? [];
+      const actItems = data.final.expenses[cat]?.items ?? [];
+      const names = new Set([...estItems.map(i => i.name), ...actItems.map(i => i.name)]);
+      names.forEach(name => {
+        hasAE = true;
+        const est = estItems.find(i => i.name === name)?.amount ?? 0;
+        const act = actItems.find(i => i.name === name)?.amount ?? 0;
+        expEstTot2 += est; expActTot += act;
+        const d = est - act; // positive = under budget
+        const r = row(cat, name, est > 0 ? fmt(est) : '—', act > 0 ? fmt(act) : '—', dStr(d), '');
+        style(r, r + 1, 0, COLS, { backgroundColor: C.expenseRow });
+        style(r, r + 1, 2, 5, { horizontalAlignment: 'RIGHT' });
+        style(r, r + 1, 4, 5, { textFormat: { foregroundColor: d >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'RIGHT' });
       });
     });
+    if (!hasAE) {
+      const r = row('', 'No expenses recorded yet', '', '', '', '');
+      style(r, r + 1, 0, COLS, { backgroundColor: C.expenseRow, textFormat: { italic: true } });
+    }
+    const aeTotR = row('EXPENSES TOTAL', '', fmt(expEstTot2), fmt(expActTot), dStr(expEstTot2 - expActTot), '');
+    style(aeTotR, aeTotR + 1, 0, COLS, { backgroundColor: C.subtotal, textFormat: { bold: true } });
+    style(aeTotR, aeTotR + 1, 2, 5, { textFormat: { bold: true }, horizontalAlignment: 'RIGHT' });
+    style(aeTotR, aeTotR + 1, 4, 5, { textFormat: { bold: true, foregroundColor: (expEstTot2 - expActTot) >= 0 ? C.greenText : C.redText }, horizontalAlignment: 'RIGHT' });
+    gap(16);
 
-    // Expenses subtotal
-    values.push(['EXPENSES TOTAL', '', '', fmt(expEstTot), fmt(expActTot), diff(expEstTot - expActTot)]);
-    const ers = ri();
-    style(ers, ers+1, 0, COLS, { backgroundColor: C.subtotal, textFormat: { bold: true } });
-    style(ers, ers+1, 3, 6, { backgroundColor: C.subtotal, textFormat: { bold: true }, horizontalAlignment: 'RIGHT' });
-
-    // ── Transactions section ──────────────────────────────────────────────────
-    values.push([]);
-    values.push(['TRANSACTIONS']);
-    const thr = ri();
-    merge(thr, thr+1);
-    style(thr, thr+1, 0, COLS, { backgroundColor: C.lightYellow, textFormat: { bold: true, fontSize: 11 }, horizontalAlignment: 'CENTER' });
-    rowH(thr, thr+1, 30);
-
-    values.push(['Date', 'Type', 'Category', 'Item / Merchant', 'Amount', 'Note']);
-    style(ri(), ri()+1, 0, COLS, { backgroundColor: C.headerBg, textFormat: { bold: true }, horizontalAlignment: 'CENTER' });
+    // ═══════════════════════════════════════════════════════
+    // 5. DAILY TRANSACTIONS
+    // ═══════════════════════════════════════════════════════
+    secHeader('📝   DAILY TRANSACTIONS', C.lightYellow, { red: 0.1, green: 0.1, blue: 0.1 });
+    colHeader('Date', 'Type', 'Category', 'Item / Merchant', 'Amount', 'Note');
 
     const txns = this.txnSvc.getTxns(mk).slice().sort((a, b) => a.date.localeCompare(b.date));
-    txns.forEach((t, i) => {
-      values.push([t.date, t.type === 'income' ? '▲ Income' : '▼ Expense', t.category, t.item, fmt(t.amount), t.note || '']);
-      const r = ri();
-      style(r, r+1, 0, COLS, { backgroundColor: i % 2 === 0 ? C.white : C.altRow });
-      style(r, r+1, 1, 2, { textFormat: { foregroundColor: t.type === 'income' ? C.greenText : C.redText } });
-      style(r, r+1, 4, 5, { horizontalAlignment: 'RIGHT' });
-    });
+    if (!txns.length) {
+      const r = row('', 'No transactions recorded this month', '', '', '', '');
+      merge(r, r + 1, 1, 6);
+      style(r, r + 1, 0, COLS, { textFormat: { italic: true }, horizontalAlignment: 'LEFT' });
+    } else {
+      txns.forEach((t, i) => {
+        const r = row(t.date, t.type === 'income' ? '▲ Income' : '▼ Expense', t.category, t.item, fmt(t.amount), t.note || '');
+        style(r, r + 1, 0, COLS, { backgroundColor: i % 2 === 0 ? C.white : C.altRow });
+        style(r, r + 1, 1, 2, { textFormat: { foregroundColor: t.type === 'income' ? C.greenText : C.redText } });
+        style(r, r + 1, 4, 5, { horizontalAlignment: 'RIGHT' });
+      });
+    }
 
-    // ── Column widths ─────────────────────────────────────────────────────────
-    colW(0, 1, 150);  // Category / Date
-    colW(1, 2, 90);   // Item / Type
-    colW(2, 3, 100);  // Type / Category
-    colW(3, 4, 180);  // Budgeted / Item
-    colW(4, 5, 110);  // Actual / Amount
-    colW(5, 6, 130);  // Difference / Note
-
-    // Freeze first row (title)
+    // ── Column widths & freeze ────────────────────────────────────────────────
+    colW(0, 1, 150); colW(1, 2, 130); colW(2, 3, 130); colW(3, 4, 200); colW(4, 5, 120); colW(5, 6, 140);
     req.push({ updateSheetProperties: { properties: { sheetId, gridProperties: { frozenRowCount: 1 } }, fields: 'gridProperties.frozenRowCount' } });
 
     return { values, requests: req };
