@@ -808,16 +808,35 @@
   overflow: hidden;
 }
 
-/* Scroll mode: many items — 3-row column flow, auto height, no visible scrollbar */
+/* Scroll mode: many items — 3-row column flow, 3.3 tiles visible (partial peek), fade hint */
 .at-cat-grid--scroll {
   grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 3 * 5px) / 4);
+  grid-auto-columns: calc((100% - 2 * 5px) / 3.3);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 .at-cat-grid--scroll::-webkit-scrollbar { display: none; }
+
+/* Scroll hint shown below grids in scroll mode */
+.at-scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--brand-400, #60a5fa);
+  letter-spacing: .3px;
+  margin: -4px 0 8px;
+  opacity: 0.85;
+  pointer-events: none;
+  user-select: none;
+}
+.at-scroll-hint i { font-size: 9px; }
 
 .at-cat-tile {
   display: flex;
@@ -880,18 +899,20 @@
   cursor: pointer;
 }
 
-/* ── Item chips: 3-row column flow, natural width per chip ── */
+/* ── Item chips: 3-row column flow, natural width, right-edge fade hint ── */
 .at-item-chips {
   display: grid;
   grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
   grid-auto-columns: max-content;
   gap: 5px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 .at-item-chips::-webkit-scrollbar { display: none; }
 

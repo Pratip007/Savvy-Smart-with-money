@@ -95,6 +95,12 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
           }
         </div>
 
+        @if (catScrollMode()) {
+          <p class="at-scroll-hint">
+            <i class="fa-solid fa-arrow-right-long"></i> scroll for more
+          </p>
+        }
+
         <!-- Inline add-category input -->
         @if (showAddCat()) {
           <div class="at-add-cat-row">
@@ -129,6 +135,10 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
             </button>
           }
         </div>
+
+        <p class="at-scroll-hint">
+          <i class="fa-solid fa-arrow-right-long"></i> scroll for more
+        </p>
 
         <!-- Inline add-item input -->
         @if (showAddItem()) {
