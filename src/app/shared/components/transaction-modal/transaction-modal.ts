@@ -25,7 +25,10 @@ function yesterdayDate(): string { return new Date(Date.now() - 86_400_000).toIS
   imports: [FormsModule],
   template: `
     <div id="txn-modal" class="modal-overlay" [style.display]="visible() ? 'flex' : 'none'" (click)="onBackdrop($event)">
-      <div class="modal-sheet at-sheet" role="dialog" aria-modal="true">
+      <div class="modal-sheet at-sheet" role="dialog" aria-modal="true"
+           (touchstart)="onSheetTouchStart($event)"
+           (touchmove)="onSheetTouchMove($event)"
+           (touchend)="onSheetTouchEnd($event)">
         <div class="modal-drag-handle"></div>
 
         <!-- Title -->
@@ -185,18 +188,22 @@ export class TransactionModalComponent {
 
   // Categories synced from budget estimation state; falls back to DEF if empty
   currentDefs = computed(() => {
-    const type    = this.txType();
-    const section = type === 'income'
+    const type     = this.txType();
+    const section  = type === 'income'
       ? this.budgetState.currentMonthData().estimates.income
       : this.budgetState.currentMonthData().estimates.expenses;
-    const entries = Object.entries(section);
-    if (entries.length > 0) {
-      return entries.map(([name, data]) => ({
-        name,
-        items: data.items.length ? data.items.map(i => i.name) : ['Other'],
-      }));
-    }
-    return type === 'income' ? DEF_INCOME : DEF_EXPENSES;
+    const defaults = type === 'income' ? DEF_INCOME : DEF_EXPENSES;
+    const saved    = Object.entries(section).map(([name, data]) => ({
+      name,
+      // If saved category has no items, fall back to DEF items for that category
+      items: data.items.length
+        ? data.items.map(i => i.name)
+        : (defaults.find(d => d.name === name)?.items ?? ['Other']),
+    }));
+    if (saved.length === 0) return defaults;
+    // Merge: show saved categories + any DEF categories not yet saved
+    const savedNames = new Set(saved.map(d => d.name));
+    return [...saved, ...defaults.filter(d => !savedNames.has(d.name))];
   });
 
   // Reacts to category() signal — updates instantly when category changes
@@ -294,8 +301,10 @@ export class TransactionModalComponent {
   confirmAddItem(): void {
     const name = this.newItemName.trim();
     if (!name) return;
-    const secKey = this.txType() === 'income' ? 'income' : 'expenses';
-    this.budgetState.addNamedItem(secKey, 'estimates', this.category(), name);
+    const secKey   = this.txType() === 'income' ? 'income' : 'expenses';
+    const defaults = secKey === 'income' ? DEF_INCOME : DEF_EXPENSES;
+    const defItems = defaults.find(d => d.name === this.category())?.items ?? [];
+    this.budgetState.addNamedItem(secKey, 'estimates', this.category(), name, defItems);
     this.item.set(name);
     this.newItemName = '';
     this.showAddItem.set(false);
@@ -330,4 +339,29 @@ export class TransactionModalComponent {
   }
 
   onBackdrop(e: MouseEvent): void { if (e.target === e.currentTarget) this.cancel(); }
+
+  private _touchStartY = 0;
+  private _sheetEl: HTMLElement | null = null;
+
+  onSheetTouchStart(e: TouchEvent): void {
+    this._touchStartY = e.touches[0].clientY;
+    this._sheetEl = e.currentTarget as HTMLElement;
+    this._sheetEl.style.transition = 'none';
+  }
+
+  onSheetTouchMove(e: TouchEvent): void {
+    const delta = e.touches[0].clientY - this._touchStartY;
+    if (delta > 0 && this._sheetEl) {
+      this._sheetEl.style.transform = `translateY(${delta}px)`;
+    }
+  }
+
+  onSheetTouchEnd(e: TouchEvent): void {
+    const delta = (e.changedTouches[0]?.clientY ?? this._touchStartY) - this._touchStartY;
+    if (this._sheetEl) {
+      this._sheetEl.style.transition = '';
+      this._sheetEl.style.transform = '';
+    }
+    if (delta > 80) this.cancel();
+  }
 }

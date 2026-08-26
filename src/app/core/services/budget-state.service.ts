@@ -100,13 +100,16 @@ export class BudgetStateService {
     });
   }
 
-  addNamedItem(type: string, mode: string, catName: string, itemName: string): void {
+  addNamedItem(type: string, mode: string, catName: string, itemName: string, seedItems: string[] = []): void {
     this.data.update(data => {
       const d = JSON.parse(JSON.stringify(data)) as AllData;
       const k = this.currentKey();
       if (!d[k]) d[k] = this.makeMonth();
-      const cat = (d[k] as any)?.[mode]?.[type]?.[catName];
-      if (cat) cat.items.push({ id: this.math.uid(), name: itemName, amount: 0 });
+      const sec = (d[k] as any)[mode][type];
+      if (!sec[catName]) {
+        sec[catName] = { collapsed: false, items: seedItems.map(n => ({ id: this.math.uid(), name: n, amount: 0 })) };
+      }
+      sec[catName].items.push({ id: this.math.uid(), name: itemName, amount: 0 });
       return d;
     });
   }
