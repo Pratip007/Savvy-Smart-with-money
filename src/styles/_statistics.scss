@@ -213,6 +213,8 @@
 /* ─── BUDGET PROGRESS ───────────────────────────────────── */
 .budget-progress { display: flex; flex-direction: column; gap: 16px; }
 
+.bp-row { display: flex; flex-direction: column; }
+
 .bp-label {
   display: flex;
   justify-content: space-between;
